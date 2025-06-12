@@ -25,6 +25,7 @@ staticfiles/
 # Secret config files (if any)
 .env
 *.env
+env/
 
 # VSCode or IDE configs
 .vscode/
@@ -49,3 +50,4 @@ pip-log.txt
 
 # Jupyter runtime (if used)
 ~/.local/share/jupyter/
+.virtual_documents/
