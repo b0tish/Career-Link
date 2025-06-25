@@ -51,3 +51,24 @@ pip-log.txt
 # Jupyter runtime (if used)
 ~/.local/share/jupyter/
 .virtual_documents/
+
+frontend/node_modules/
+
+# Frontend build artifacts
+frontend/dist/
+# Frontend cache
+frontend/.cache/
+# Frontend logs
+frontend/logs/
+# Frontend environment files
+frontend/.env
+# Frontend temporary files
+frontend/.tmp/
+# Frontend IDE configs
+frontend/.vscode/
+# Frontend build files
+frontend/build/
+# Frontend test coverage
+frontend/coverage/
+# Frontend package lock files
+frontend/package-lock.json
