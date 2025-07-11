@@ -40,7 +40,7 @@ def restore_from_backup(backup_path, model_path):
     else:
         print("❌ Backup path not found!")
 
-def get_optimizer_with_custom_lr(nlp_model, base_lr=0.0001, new_model_lr=0.001):
+def get_optimizer_with_custom_lr(nlp_model, base_lr=0.0008, new_model_lr=0.001):
     """
     Get optimizer with custom learning rate for incremental training.
     
@@ -280,7 +280,7 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
         return spacy_examples
 
     # Get optimizer with custom learning rate based on whether it's a new or existing model
-    optimizer, LEARNING_RATE = get_optimizer_with_custom_lr(training_nlp, base_lr=0.0009, new_model_lr=0.001)
+    optimizer, LEARNING_RATE = get_optimizer_with_custom_lr(training_nlp, base_lr=0.0008, new_model_lr=0.001)
 
     # Initialize the model if it's new
     if not is_existing_model:
@@ -293,8 +293,8 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
 
     # Training parameters
     batch_size = 8
-    n_epochs = 30
-    patience = 15 # Number of epochs to wait for improvement before early stopping
+    n_epochs = 20
+    patience = 10 # Number of epochs to wait for improvement before early stopping
     best_f1 = 0.0
     epochs_without_improvement = 0
 
