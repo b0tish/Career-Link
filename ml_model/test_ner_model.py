@@ -66,62 +66,51 @@ def test_ner_model(model_path="skill_ner_model"):
 
         # The raw text and the list of actual skills
         gold_raw_data = [
-            ("I have experience in data analysis, project management, and communication.", ["data analysis", "project management", "communication"]),
-            ("My skills include Python, machine learning, and customer service.", ["Python", "machine learning", "customer service"]),
-            ("Expertise in statistics, marketing strategy, and client relations.", ["statistics", "marketing strategy", "client relations"]),
-            ("Worked on inventory management using Excel and SQL.", ["inventory management", "Excel", "SQL"]),
-            ("Looking for a position where I can use my skills in accounting and finance.", ["accounting", "finance"]),
-            ("Managed a team in software development and agile methodologies.", ["software development", "agile methodologies"]),
-            ("Proficient in C++, Java, and object-oriented programming.", ["C++", "Java", "object-oriented programming"]),
-            ("Utilized AWS for cloud deployment and network administration.", ["AWS", "cloud deployment", "network administration"]),
-            ("Developed strategies for digital marketing and content creation.", ["digital marketing", "content creation"]),
-            ("Summary Seeking a Planning Engineer position to utilize my skills and abilities in an industry that offers security and professional growth while being resourceful innovative and flexible. Highlights Packages : AutoCAD 2D & 3D, Primavera Complete (Web,Client, Progress Reporter, Team Member) M.S-Office, M.S-Dos, Digital Designing & Video Editing (Adobe-Photoshop, Page Maker, Illustrator, Corel-Draw, Adobe-Preimere, Ulead Video Studio, Macromedia Flash, Projects, Computer Fundamentals and Information Technology).", ["Planning Engineer", "AutoCAD 2D & 3D", "Primavera Complete", "M.S-Office", "M.S-Dos", "Digital Designing", "Video Editing", "Adobe-Photoshop", "Page Maker", "Illustrator", "Corel-Draw", "Adobe-Preimere", "Ulead Video Studio", "Macromedia Flash", "Computer Fundamentals", "Information Technology"]),
-            ("Skilled in JavaScript, HTML5, CSS3, and responsive web design.", ["JavaScript", "HTML5", "CSS3", "responsive web design"]),
-            ("Strong background in cloud computing, specifically Azure and Google Cloud Platform.", ["cloud computing", "Azure", "Google Cloud Platform"]),
-            ("Implemented ERP systems and CRM software for various clients.", ["ERP systems", "CRM software"]),
-            ("Successfully led teams in software testing and quality assurance.", ["software testing", "quality assurance"]),
-            ("Experience with database management using PostgreSQL and MongoDB.", ["database management", "PostgreSQL", "MongoDB"]),
-            ("Developed robust APIs using Node.js and Express.js.", ["APIs", "Node.js", "Express.js"]),
-            ("Adept at financial modeling, budgeting, and forecasting.", ["financial modeling", "budgeting", "forecasting"]),
-            ("Managed large-scale data migration projects using ETL tools.", ["data migration", "ETL tools"]),
-            ("Proficient in cybersecurity protocols and network security.", ["cybersecurity protocols", "network security"]),
-            ("Expert in technical writing, documentation, and user manuals.", ["technical writing", "documentation", "user manuals"]),
-            ("My responsibilities included Scrum Master duties and Kanban implementation.", ["Scrum Master", "Kanban implementation"]),
-            ("Hands-on experience with Docker, Kubernetes, and continuous integration.", ["Docker", "Kubernetes", "continuous integration"]),
-            ("Performed risk assessment and compliance auditing.", ["risk assessment", "compliance auditing"]),
-            ("Extensive knowledge of supply chain management and logistics.", ["supply chain management", "logistics"]),
-            ("Conducted market research and competitive analysis.", ["market research", "competitive analysis"]),
-            ("Utilized Photoshop and Illustrator for graphic design projects.", ["Photoshop", "Illustrator", "graphic design"]),
-            ("Familiar with various operating systems, including Linux and Windows Server.", ["operating systems", "Linux", "Windows Server"]),
-            ("Designed and deployed machine learning models in production.", ["machine learning models"]),
-            ("Excellent problem-solving skills and critical thinking.", ["problem-solving skills", "critical thinking"]),
-            ("Experience in sales, negotiation, and contract management.", ["sales", "negotiation", "contract management"]),
-            ("Strong command over various data structures and algorithms.", ["data structures", "algorithms"]),
-            ("Administered SQL Server databases and optimized queries.", ["SQL Server", "optimized queries"]),
-            ("Implemented secure coding practices and conducted code reviews.", ["secure coding practices", "code reviews"]),
-            ("Expert in business intelligence and data visualization tools like Tableau.", ["business intelligence", "data visualization tools", "Tableau"]),
-            ("Contributed to open-source projects using Git and GitHub.", ["open-source projects", "Git", "GitHub"]),
-            ("Facilitated workshops on agile transformation and product ownership.", ["agile transformation", "product ownership"]),
-            ("Designed user interfaces (UI) and user experiences (UX) using Figma.", ["user interfaces", "UI", "user experiences", "UX", "Figma"]),
-            ("Authored research papers on natural language processing.", ["research papers", "natural language processing"]),
-            ("Proficient in using JIRA for project tracking.", ["JIRA", "project tracking"]),
-            ("Successfully managed client relationships and stakeholder communication.", ["client relationships", "stakeholder communication"]),
-            ("Adept at statistical analysis and experimental design.", ["statistical analysis", "experimental design"]),
-            ("Experience with virtualization technologies like VMware and VirtualBox.", ["virtualization technologies", "VMware", "VirtualBox"]),
-            ("Developed mobile applications for Android and iOS platforms.", ["mobile applications", "Android", "iOS platforms"]),
-            ("Provided technical support and troubleshooting for enterprise software.", ["technical support", "troubleshooting"]),
-            ("Strong analytical skills with a focus on data-driven decision making.", ["analytical skills", "data-driven decision making"]),
-            ("Managed social media campaigns and content marketing strategies.", ["social media campaigns", "content marketing strategies"]),
-            ("Familiar with GDPR compliance and data privacy regulations.", ["GDPR compliance", "data privacy regulations"]),
-            ("Conducted performance tuning for web applications.", ["performance tuning"]),
-            ("Implemented CI/CD pipelines using Jenkins and GitLab CI.", ["CI/CD pipelines", "Jenkins", "GitLab CI"]),
-            ("My core competencies include strategic planning and organizational development.", ["strategic planning", "organizational development"])
-        ]
+    ("Proficient in Python and Java, with extensive experience in machine learning and data analysis.",
+     ["Python", "Java", "machine learning", "data analysis"]),
+    ("Managed complex projects using Agile methodologies and Scrum frameworks, ensuring on-time delivery.",
+     ["Agile methodologies", "Scrum frameworks", "project management"]),
+    ("Designed and implemented user interfaces with Figma and Sketch, focusing on user-centered design principles.",
+     ["Figma", "Sketch", "user-centered design", "UI design"]),
+    ("Expert in digital marketing strategies, including SEO, SEM, and content creation for social media platforms.",
+     ["digital marketing", "SEO", "SEM", "content creation", "social media"]),
+    ("Administered patient care, managed electronic health records (EHR), and provided critical care support.",
+     ["patient care", "electronic health records (EHR)", "critical care"]),
+    ("Developed comprehensive lesson plans for high school students, utilizing Google Classroom and differentiated instruction.",
+     ["lesson planning", "Google Classroom", "differentiated instruction"]),
+    ("Successfully led cross-functional teams in software development life cycles and quality assurance.",
+     ["team leadership", "software development life cycle", "quality assurance"]),
+    ("Conducted in-depth market research and competitive analysis to identify new business opportunities.",
+     ["market research", "competitive analysis"]),
+    ("Optimized cloud infrastructure on AWS and handled database administration for PostgreSQL.",
+     ["cloud infrastructure", "AWS", "database administration", "PostgreSQL"]),
+    ("Skilled in financial reporting, budgeting, and risk management for enterprise-level operations.",
+     ["financial reporting", "budgeting", "risk management"]),
+    ("Implemented cybersecurity protocols and conducted vulnerability assessments to protect sensitive data.",
+     ["cybersecurity protocols", "vulnerability assessments"]),
+    ("Created engaging visual designs using Adobe Creative Suite, including Photoshop and Illustrator.",
+     ["Adobe Creative Suite", "Photoshop", "Illustrator", "visual design"]),
+    ("Facilitated training sessions and workshops, demonstrating strong presentation and public speaking skills.",
+     ["training", "workshops", "presentation skills", "public speaking"]),
+    ("Analyzed large datasets using R and Pandas to derive actionable insights for strategic decision-making.",
+     ["R", "Pandas", "data analysis", "strategic decision-making"]),
+    ("Managed supplier relationships and optimized supply chain logistics for cost reduction.",
+     ["supplier relationship management", "supply chain logistics", "cost reduction"]),
+    ("Expertise in network administration, including configuring routers, switches, and firewalls.",
+     ["network administration", "routers", "switches", "firewalls"]),
+    ("Applied statistical analysis to interpret experimental data and formulate conclusions.",
+     ["statistical analysis", "experimental data interpretation"]),
+    ("Provided technical support to end-users, troubleshooting hardware and software issues.",
+     ["technical support", "troubleshooting", "hardware", "software"]),
+    ("Skilled in negotiation and client relationship management, fostering long-term partnerships.",
+     ["negotiation", "client relationship management"]),
+    ("Developed mobile applications for iOS using Swift and Xcode, ensuring responsive user experience.",
+     ["mobile application development", "iOS", "Swift", "Xcode"]),
+]        
 
         # Prepare examples for the scorer using explicit reference and predicted docs
         examples = []
         for text, gold_skills in gold_raw_data:
-            # Create the reference Doc (gold standard)
             reference_doc = trained_nlp.make_doc(text)
             reference_entities = get_aligned_entities(trained_nlp, text, gold_skills)
             reference_doc.ents = trained_nlp.make_doc(text).ents # Clear default ents if any
@@ -193,13 +182,13 @@ def test_ner_model(model_path="skill_ner_model"):
                 print(" - No skills found by NER model.")
 
         # Test the enhanced skill detection function separately
-        print("\n--- ENHANCED SKILL DETECTION (using generate_data.py function) ---")
-        sample_text_for_enhanced_detection = "My professional profile includes expertise in Advanced Python, Java Enterprise Edition, and intricate Data Analysis techniques. I've also managed cross-functional teams in Project Management and implemented Machine Learning solutions for clients. Furthermore, I am proficient in SQL Server, AWS Cloud services, and have strong Communication skills. My experience extends to Digital Marketing, Content Creation, and utilizing Adobe Photoshop for graphic design. I've also worked with Primavera Complete for project scheduling."
-        
-        detected_skills = add_skills_to_sentences([sample_text_for_enhanced_detection])
-        print(f"Input: {sample_text_for_enhanced_detection[:200]}...")
-        print(f"Skills detected by enhanced function: {detected_skills}")
-        print(f"Number of skills found: {len(detected_skills)}")
+        # print("\n--- ENHANCED SKILL DETECTION (using generate_data.py function) ---")
+        # sample_text_for_enhanced_detection = "My professional profile includes expertise in Advanced Python, Java Enterprise Edition, and intricate Data Analysis techniques. I've also managed cross-functional teams in Project Management and implemented Machine Learning solutions for clients. Furthermore, I am proficient in SQL Server, AWS Cloud services, and have strong Communication skills. My experience extends to Digital Marketing, Content Creation, and utilizing Adobe Photoshop for graphic design. I've also worked with Primavera Complete for project scheduling."
+        #
+        # detected_skills = add_skills_to_sentences([sample_text_for_enhanced_detection])
+        # print(f"Input: {sample_text_for_enhanced_detection[:200]}...")
+        # print(f"Skills detected by enhanced function: {detected_skills}")
+        # print(f"Number of skills found: {len(detected_skills)}")
 
     else:
         print(f"❌ No trained model found at {model_path}. Please train the model first.")

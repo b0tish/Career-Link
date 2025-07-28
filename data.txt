@@ -1,0 +1,32 @@
+Base
+Precision (P): 0.7416
+Recall (R): 0.4853
+F1-Score (F): 0.5867
+
+0.0009
+Precision (P): 0.7857
+Recall (R): 0.5662
+F1-Score (F): 0.6581
+
+0.0004
+Precision (P): 0.8046
+Recall (R): 0.5147
+F1-Score (F): 0.6278
+
+0.0006
+Precision (P): 0.8023
+Recall (R): 0.5074
+F1-Score (F): 0.6216
+
+0.0008
+Precision (P): 0.8068
+Recall (R): 0.5221
+F1-Score (F): 0.6339
+
+Precision (P): 0.8163
+Recall (R): 0.5882
+F1-Score (F): 0.6838
+
+Precision (P): 0.7941
+Recall (R): 0.5956
+F1-Score (F): 0.6807
