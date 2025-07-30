@@ -61,7 +61,10 @@ def build_skill_matcher(skill_list):
     patterns = []
     normalized_map = {}
 
-    for skill in skill_list:
+
+    sorted_skill_list = sorted(skill_list, key=len, reverse=True)
+
+    for skill in sorted_skill_list:
         skill_clean = skill.strip().lower()
         normalized_map[skill_clean] = skill
         patterns.append(temp_nlp.make_doc(skill_clean))

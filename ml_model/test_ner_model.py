@@ -106,6 +106,50 @@ def test_ner_model(model_path="skill_ner_model"):
      ["negotiation", "client relationship management"]),
     ("Developed mobile applications for iOS using Swift and Xcode, ensuring responsive user experience.",
      ["mobile application development", "iOS", "Swift", "Xcode"]),
+    ("Proficient in Java, Python, and Data Structures. Experience in cloud platforms like AWS.",
+     ["Java", "Python", "Data Structures", "AWS"]),
+    
+    ("Worked on Machine Learning algorithms and Deep Learning frameworks using TensorFlow and PyTorch.",
+     ["Machine Learning", "Deep Learning", "TensorFlow", "PyTorch"]),
+    
+    ("Experienced in frontend development with HTML5, CSS3, and React. Basic knowledge of Git.",
+     ["HTML5", "CSS3", "React", "Git"]),
+    
+    ("Led DevOps projects using Jenkins and Docker for automated CI/CD pipelines.",
+     ["DevOps", "Jenkins", "Docker", "CI/CD"]),
+    
+    ("Managed databases using MySQL and PostgreSQL. Familiar with ORM tools like Hibernate.",
+     ["MySQL", "PostgreSQL", "Hibernate"]),
+    
+    ("Built mobile apps using Swift and React Native. Hands-on with Xcode.",
+     ["Swift", "React Native", "Xcode"]),
+    
+    ("Handled backend systems using Django and Flask. Implemented RESTful APIs.",
+     ["Django", "Flask", "RESTful APIs"]),
+    
+    ("Collaborated in Agile environments. Strong Communication and Time Management skills.",
+     ["Agile", "Communication", "Time Management"]),
+    
+    ("Experience in cybersecurity with tools like Wireshark, Metasploit, and Kali Linux.",
+     ["Wireshark", "Metasploit", "Kali Linux", "cybersecurity"]),
+    
+    ("Worked with SAP ERP modules and integrated financial reports using Excel and Tableau.",
+     ["SAP", "Excel", "Tableau"]),
+    
+    ("Expertise in Photoshop, Illustrator, and Adobe XD for UI/UX design.",
+     ["Photoshop", "Illustrator", "Adobe XD", "UI/UX design"]),
+    
+    ("Involved in academic research using MATLAB and LaTeX. Familiar with academic writing.",
+     ["MATLAB", "LaTeX"]),
+    
+    ("Conducted market research and email marketing using HubSpot and Google Analytics.",
+     ["HubSpot", "Google Analytics", "email marketing", "market research"]),
+    
+    ("Led cross-functional teams using Jira for project tracking and Scrum methodologies.",
+     ["Jira", "Scrum", "project tracking"]),
+    
+    ("Created 3D models using AutoCAD and SolidWorks. Simulated stress tests.",
+     ["AutoCAD", "SolidWorks"]),
 ]        
 
         # Prepare examples for the scorer using explicit reference and predicted docs
@@ -169,7 +213,7 @@ def test_ner_model(model_path="skill_ner_model"):
 
         print("\n--- NER Model Predictions (for visual inspection) ---")
         # Keep some visual inspection for individual sentences
-        for i, (text, _) in enumerate(gold_raw_data[:10], 1): # Display first 5 for brevity
+        for i, (text, _) in enumerate(gold_raw_data[:30], 1): # Display first 5 for brevity
             doc = trained_nlp(text)
             print(f"\nTest Case {i}:")
             print(f"Input: {text}")
