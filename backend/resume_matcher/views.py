@@ -8,6 +8,8 @@ from rest_framework import status
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")
@@ -21,6 +23,32 @@ nlp = spacy.load(model_path)
 client = MongoClient(MONGODB_URI)
 db = client["career_link"]                         
 job_collection = db["jobs"]                        
+
+# --- NEW: Pre-fit TF-IDF Vectorizer at startup ---
+tfidf_vectorizer = TfidfVectorizer(stop_words='english')
+
+try:
+    # Fetch all job data from the database once
+    all_jobs_cursor = job_collection.find()
+    all_jobs = list(all_jobs_cursor)
+    
+    # Create a corpus of job content (title + skills)
+    job_corpus = [
+        job.get("job_title", "") + " " + " ".join(job.get("required_skills", []))
+        for job in all_jobs
+    ]
+    
+    # If there are jobs, fit the vectorizer to learn the vocabulary and IDF weights
+    if job_corpus:
+        tfidf_vectorizer.fit(job_corpus)
+    print("TF-IDF vectorizer pre-fitted successfully on startup.")
+
+except Exception as e:
+    # Handle potential DB connection errors or other issues at startup
+    all_jobs = [] # Ensure all_jobs is defined to prevent runtime errors
+    print(f"WARNING: Could not pre-fit TF-IDF vectorizer. It will be fitted on-the-fly. Error: {e}")
+# --- END NEW ---
+
 
 def extract_text_from_pdf(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
@@ -66,14 +94,27 @@ def extract_skills(text):
     
     return all_skills
 
-def compute_match_score(user_skills, job_skills):  # NEW
+def compute_skill_match_score(user_skills, job_skills):
     if not user_skills or not job_skills:
         return 0.0
     user_set = set(user_skills)
     job_set = set(skill.lower() for skill in job_skills)
     intersection = user_set & job_set
-    union = user_set | job_set
-    return len(intersection) / len(union)
+    # Avoid division by zero if a job has no skills listed
+    return len(intersection) / len(job_set) if len(job_set) > 0 else 0.0
+
+def compute_keyword_overlap(resume_text, job_text):
+    if not resume_text or not job_text or not hasattr(tfidf_vectorizer, 'vocabulary_') or not tfidf_vectorizer.vocabulary_:
+        return 0.0
+    
+    # Use the globally pre-fitted vectorizer to transform the texts
+    try:
+        tfidf_matrix = tfidf_vectorizer.transform([resume_text, job_text])
+        cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])
+        return cosine_sim[0][0]
+    except Exception:
+        # This can happen if the text contains only words not in the vocabulary
+        return 0.0
 
 class ResumeUploadView(APIView):
     parser_classes = [MultiPartParser]
@@ -84,20 +125,39 @@ class ResumeUploadView(APIView):
             return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Extract skills from uploaded PDF
-            text = extract_text_from_pdf(resume_file)
-            extracted_skills = extract_skills(text)
+            # Extract text and skills from uploaded PDF
+            resume_text = extract_text_from_pdf(resume_file)
+            extracted_skills = extract_skills(resume_text)
+
+            # NEW: Adjusted weights for a more balanced score
+            alpha = 0.6  # Weight for skill match
+            beta = 0.4   # Weight for keyword overlap
 
             # Fetch jobs from MongoDB and compute similarity
             job_matches = []
-            for job in job_collection.find():
+            # Use the 'all_jobs' list fetched at startup to avoid redundant DB calls
+            for job in all_jobs:
                 job_skills = job.get("required_skills", [])
-                score = compute_match_score(extracted_skills, job_skills)
+                job_title = job.get("job_title", "")
+
+                # 1. Calculate SkillMatchScore
+                skill_score = compute_skill_match_score(extracted_skills, job_skills)
+
+                # 2. Calculate KeywordOverlap using a more focused text representation
+                # NEW: Compare job text against extracted skills instead of the whole resume
+                resume_skills_text = " ".join(extracted_skills)
+                job_text = job_title + " " + " ".join(job_skills)
+                keyword_score = compute_keyword_overlap(resume_skills_text, job_text)
+
+                # 3. Combine scores for final ranking
+                final_score = (alpha * skill_score) + (beta * keyword_score)
 
                 job_matches.append({
                     "company": job.get("company"),
-                    "job_title": job.get("job_title"),
-                    "match_score": round(score, 3),
+                    "job_title": job_title,
+                    "match_score": round(final_score, 3),
+                    "skill_match": round(skill_score, 3),
+                    "keyword_match": round(keyword_score, 3),
                     "required_skills": job_skills
                 })
 
