@@ -10,6 +10,7 @@ import shutil
 import datetime
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
+from skills_data import skills_domain
 
 model_path = "skill_ner_model"
 
@@ -204,14 +205,25 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
         
     df = pd.read_csv(data_path)
 
+    skills_domain_set = {skill.lower() for skill in skills_domain}
+
     processed_raw_data = []
     for _, row in df.iterrows():
         try:
             data_tuple = ast.literal_eval(row.iloc[0])
             if isinstance(data_tuple, tuple) and len(data_tuple) == 2 and \
                isinstance(data_tuple[0], str) and isinstance(data_tuple[1], list):
-                if data_tuple[0].strip() and data_tuple[1]: 
-                    processed_raw_data.append(data_tuple)
+                
+                text, skills = data_tuple
+                
+                if not text.strip():
+                    continue
+
+                # Filter skills to only include those from our curated list
+                cleaned_skills = [skill for skill in skills if skill.lower().strip() in skills_domain_set]
+                
+                # This now includes examples with no skills, which act as negative examples
+                processed_raw_data.append((text, cleaned_skills))
             else:
                 print(f"Skipping malformed row: {row.iloc[0]}")
         except (ValueError, SyntaxError, TypeError) as e:
@@ -235,8 +247,8 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
             else:
                 print(f"Skipping example due to remaining misalignment after filtering: {text[:75]}...")
         else:
-            print(f"Skipping example with no valid entities: {text[:75]}...")
-            pass # It's okay to skip examples with no entities if that's the desired outcome
+            # Add examples with no entities as negative examples
+            cleaned_train_data.append((text, {"entities": []}))
 
     print(f"Total training examples with valid and aligned entities: {len(cleaned_train_data)}")
 
