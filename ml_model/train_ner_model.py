@@ -62,45 +62,69 @@ def get_optimizer_with_custom_lr(nlp_model, base_lr=0.0008, new_model_lr=0.001):
     return optimizer, learning_rate
 
 def create_training_example(nlp_model, text, skill_list):
+    """
+    Creates a spaCy training example by finding skills in text and creating entities.
+    This version is improved to handle case sensitivity and create more robust training examples.
+    """
     doc = nlp_model.make_doc(text)
     entities = []
-
     text_lower = text.lower()
 
     for skill in skill_list:
         skill_lower = skill.lower().strip()
+        if not skill_lower:
+            continue
 
-        start_idx = 0
-        while True:
-            pos = text_lower.find(skill_lower, start_idx)
-            if pos == -1:
-                break
+        # Create multiple patterns to handle different case variations
+        patterns = []
+        
+        # Original skill pattern
+        base_pattern = r'\b' + re.escape(skill_lower).replace(r'\ ', r'\s+') + r'\b'
+        patterns.append(base_pattern)
+        
+        # Handle common variations like "Python" vs "python"
+        if skill_lower != skill_lower.title():
+            title_pattern = r'\b' + re.escape(skill_lower.title()).replace(r'\ ', r'\s+') + r'\b'
+            patterns.append(title_pattern)
+        
+        # Handle acronyms (all caps)
+        if skill_lower.isupper() or len(skill_lower.split()) == 1:
+            caps_pattern = r'\b' + re.escape(skill_lower.upper()).replace(r'\ ', r'\s+') + r'\b'
+            patterns.append(caps_pattern)
+        
+        for pattern in patterns:
+            try:
+                # Search in both lowercase and original text
+                for match in re.finditer(pattern, text_lower):
+                    start, end = match.span()
+                    # Align match with token boundaries.
+                    char_span = doc.char_span(start, end, alignment_mode="expand")
+                    if char_span is not None:
+                        entities.append((char_span.start_char, char_span.end_char, "SKILL"))
+                
+                # Also search in original text for case-sensitive matches
+                for match in re.finditer(pattern, text):
+                    start, end = match.span()
+                    char_span = doc.char_span(start, end, alignment_mode="expand")
+                    if char_span is not None:
+                        entities.append((char_span.start_char, char_span.end_char, "SKILL"))
+                        
+            except re.error as e:
+                print(f"Warning: Regex error for skill '{skill}' with pattern '{pattern}': {e}")
 
-            pattern = r'\b' + re.escape(skill_lower) + r'\b'
-            pattern = pattern.replace(r'\ ', r'\s+') 
-            
-            match = re.match(pattern, text_lower[pos:])
-            
-            if match:
-                char_span = doc.char_span(pos, pos + len(skill_lower), alignment_mode="expand")
-                if char_span is not None:
-                    entities.append((char_span.start_char, char_span.end_char, "SKILL"))
-            start_idx = pos + 1 # Move past the current match to find subsequent ones
+    # Remove duplicates and sort entities to handle overlaps correctly.
+    # Sort by start index (ascending) and then by end index (descending).
+    # This ensures that for overlapping entities starting at the same point, the longest one comes first.
+    unique_entities = sorted(list(set(entities)), key=lambda x: (x[0], -x[1]))
 
-    entities = sorted(list(set(entities)), key=lambda x: x[0])
-
+    # Filter out overlapping entities, keeping the longest ones.
     filtered_entities = []
     current_end = -1
-    for start, end, label in entities:
-        if start >= current_end: # No overlap, or starts after previous one ends
+    for start, end, label in unique_entities:
+        # If the current entity doesn't overlap with the last one added, add it.
+        if start >= current_end:
             filtered_entities.append((start, end, label))
             current_end = end
-        elif end > current_end: # Overlaps, but current entity extends further
-            # Replace the last added entity if the current one is strictly better (longer)
-            last_start, last_end, last_label = filtered_entities[-1]
-            if (end - start) > (last_end - last_start): # If current is longer
-                filtered_entities[-1] = (last_start, end, label) # Extend the existing entry
-            current_end = max(current_end, end) # Update current_end regardless
 
     return (text, {"entities": filtered_entities})
 
@@ -286,13 +310,12 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
         print("Continuing training with existing model and its optimizer state...")
 
     # Training parameters
-    batch_size = 16 # Increased batch size
-    n_epochs = 30 # Increased max epochs
-    patience = 10 # Number of epochs to wait for improvement before early stopping
+    batch_size = 16 
+    n_epochs = 30 
+    patience = 10  
     best_f1 = 0.0
     epochs_without_improvement = 0
 
-    # Adjust parameters for incremental training (more conservative)
     if is_existing_model:
         n_epochs = min(n_epochs, 25) # Max epochs for fine-tuning
         patience = max(patience, 8)  # More patience for subtle improvements

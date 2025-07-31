@@ -3,7 +3,6 @@ import os
 from spacy.training import Example
 from spacy.scorer import Scorer
 import re
-from generate_csv_data import add_skills_to_sentences
 
 # Helper function to create aligned entities for a Doc object
 def get_aligned_entities(nlp_model, text, gold_skills):
@@ -66,91 +65,51 @@ def test_ner_model(model_path="skill_ner_model"):
 
         # The raw text and the list of actual skills
         gold_raw_data = [
-    ("Proficient in Python and Java, with extensive experience in machine learning and data analysis.",
-     ["Python", "Java", "machine learning", "data analysis"]),
-    ("Managed complex projects using Agile methodologies and Scrum frameworks, ensuring on-time delivery.",
-     ["Agile methodologies", "Scrum frameworks", "project management"]),
-    ("Designed and implemented user interfaces with Figma and Sketch, focusing on user-centered design principles.",
-     ["Figma", "Sketch", "user-centered design", "UI design"]),
-    ("Expert in digital marketing strategies, including SEO, SEM, and content creation for social media platforms.",
-     ["digital marketing", "SEO", "SEM", "content creation", "social media"]),
-    ("Administered patient care, managed electronic health records (EHR), and provided critical care support.",
-     ["patient care", "electronic health records (EHR)", "critical care"]),
-    ("Developed comprehensive lesson plans for high school students, utilizing Google Classroom and differentiated instruction.",
-     ["lesson planning", "Google Classroom", "differentiated instruction"]),
-    ("Successfully led cross-functional teams in software development life cycles and quality assurance.",
-     ["team leadership", "software development life cycle", "quality assurance"]),
-    ("Conducted in-depth market research and competitive analysis to identify new business opportunities.",
-     ["market research", "competitive analysis"]),
-    ("Optimized cloud infrastructure on AWS and handled database administration for PostgreSQL.",
-     ["cloud infrastructure", "AWS", "database administration", "PostgreSQL"]),
-    ("Skilled in financial reporting, budgeting, and risk management for enterprise-level operations.",
-     ["financial reporting", "budgeting", "risk management"]),
-    ("Implemented cybersecurity protocols and conducted vulnerability assessments to protect sensitive data.",
-     ["cybersecurity protocols", "vulnerability assessments"]),
-    ("Created engaging visual designs using Adobe Creative Suite, including Photoshop and Illustrator.",
-     ["Adobe Creative Suite", "Photoshop", "Illustrator", "visual design"]),
-    ("Facilitated training sessions and workshops, demonstrating strong presentation and public speaking skills.",
-     ["training", "workshops", "presentation skills", "public speaking"]),
-    ("Analyzed large datasets using R and Pandas to derive actionable insights for strategic decision-making.",
-     ["R", "Pandas", "data analysis", "strategic decision-making"]),
-    ("Managed supplier relationships and optimized supply chain logistics for cost reduction.",
-     ["supplier relationship management", "supply chain logistics", "cost reduction"]),
-    ("Expertise in network administration, including configuring routers, switches, and firewalls.",
-     ["network administration", "routers", "switches", "firewalls"]),
-    ("Applied statistical analysis to interpret experimental data and formulate conclusions.",
-     ["statistical analysis", "experimental data interpretation"]),
-    ("Provided technical support to end-users, troubleshooting hardware and software issues.",
-     ["technical support", "troubleshooting", "hardware", "software"]),
-    ("Skilled in negotiation and client relationship management, fostering long-term partnerships.",
-     ["negotiation", "client relationship management"]),
-    ("Developed mobile applications for iOS using Swift and Xcode, ensuring responsive user experience.",
-     ["mobile application development", "iOS", "Swift", "Xcode"]),
-    ("Proficient in Java, Python, and Data Structures. Experience in cloud platforms like AWS.",
-     ["Java", "Python", "Data Structures", "AWS"]),
-    
-    ("Worked on Machine Learning algorithms and Deep Learning frameworks using TensorFlow and PyTorch.",
-     ["Machine Learning", "Deep Learning", "TensorFlow", "PyTorch"]),
-    
-    ("Experienced in frontend development with HTML5, CSS3, and React. Basic knowledge of Git.",
-     ["HTML5", "CSS3", "React", "Git"]),
-    
-    ("Led DevOps projects using Jenkins and Docker for automated CI/CD pipelines.",
-     ["DevOps", "Jenkins", "Docker", "CI/CD"]),
-    
-    ("Managed databases using MySQL and PostgreSQL. Familiar with ORM tools like Hibernate.",
-     ["MySQL", "PostgreSQL", "Hibernate"]),
-    
-    ("Built mobile apps using Swift and React Native. Hands-on with Xcode.",
-     ["Swift", "React Native", "Xcode"]),
-    
-    ("Handled backend systems using Django and Flask. Implemented RESTful APIs.",
-     ["Django", "Flask", "RESTful APIs"]),
-    
-    ("Collaborated in Agile environments. Strong Communication and Time Management skills.",
-     ["Agile", "Communication", "Time Management"]),
-    
-    ("Experience in cybersecurity with tools like Wireshark, Metasploit, and Kali Linux.",
-     ["Wireshark", "Metasploit", "Kali Linux", "cybersecurity"]),
-    
-    ("Worked with SAP ERP modules and integrated financial reports using Excel and Tableau.",
-     ["SAP", "Excel", "Tableau"]),
-    
-    ("Expertise in Photoshop, Illustrator, and Adobe XD for UI/UX design.",
-     ["Photoshop", "Illustrator", "Adobe XD", "UI/UX design"]),
-    
-    ("Involved in academic research using MATLAB and LaTeX. Familiar with academic writing.",
-     ["MATLAB", "LaTeX"]),
-    
-    ("Conducted market research and email marketing using HubSpot and Google Analytics.",
-     ["HubSpot", "Google Analytics", "email marketing", "market research"]),
-    
-    ("Led cross-functional teams using Jira for project tracking and Scrum methodologies.",
-     ["Jira", "Scrum", "project tracking"]),
-    
-    ("Created 3D models using AutoCAD and SolidWorks. Simulated stress tests.",
-     ["AutoCAD", "SolidWorks"]),
-]        
+            ("Developed a full-stack solution using React for the frontend and Node.js for the backend. Deployed with Docker and Kubernetes.", ["react", "node.js", "docker", "kubernetes"]),
+            ("My role involved data analysis with Python, using libraries like Pandas and NumPy. I also have experience with SQL.", ["data analysis", "python", "pandas", "numpy", "sql"]),
+            ("I have no relevant skills.", []),
+            ("The team used Agile methodologies, specifically Scrum, to manage the project. We tracked our work in JIRA.", ["agile", "scrum", "jira"]),
+            ("I am proficient in Microsoft Office, including Excel and Word.", ["microsoft office", "excel", "word"]),
+            ("The project required knowledge of cloud computing, specifically AWS and Azure.", ["cloud computing", "aws", "azure"]),
+            ("I have experience with machine learning, using TensorFlow and PyTorch.", ["machine learning", "tensorflow", "pytorch"]),
+            ("Built RESTful APIs using Django and Flask, and managed deployments with Docker and Kubernetes.", ["django", "flask", "docker", "kubernetes", "restful apis"]),
+            ("Designed and implemented user interfaces with Figma and Sketch, focusing on user-centered design principles.", ["figma", "sketch", "user-centered design"]),
+            ("Expert in digital marketing strategies, including SEO, SEM, and content creation for social media platforms.", ["digital marketing", "seo", "sem", "content creation", "social media"]),
+            ("Administered patient care, managed electronic health records (EHR), and provided critical care support.", ["patient care", "electronic health records", "ehr", "critical care"]),
+            ("Developed comprehensive lesson plans for high school students, utilizing Google Classroom and differentiated instruction.", ["lesson planning", "google classroom", "differentiated instruction"]),
+            ("Successfully led cross-functional teams in software development life cycles and quality assurance.", ["team leadership", "software development life cycle", "quality assurance"]),
+            ("Conducted in-depth market research and competitive analysis to identify new business opportunities.", ["market research", "competitive analysis"]),
+            ("Optimized cloud infrastructure on AWS and handled database administration for PostgreSQL.", ["cloud infrastructure", "aws", "database administration", "postgresql"]),
+            ("Skilled in financial reporting, budgeting, and risk management for enterprise-level operations.", ["financial reporting", "budgeting", "risk management"]),
+            ("Implemented cybersecurity protocols and conducted vulnerability assessments to protect sensitive data.", ["cybersecurity", "vulnerability assessments"]),
+            ("Created engaging visual designs using Adobe Creative Suite, including Photoshop and Illustrator.", ["adobe creative suite", "photoshop", "illustrator", "visual design"]),
+            ("Facilitated training sessions and workshops, demonstrating strong presentation and public speaking skills.", ["training", "workshops", "presentation skills", "public speaking"]),
+            ("Analyzed large datasets using R and Pandas to derive actionable insights for strategic decision-making.", ["r", "pandas", "data analysis", "strategic decision-making"]),
+            ("Managed supplier relationships and optimized supply chain logistics for cost reduction.", ["supplier relationship management", "supply chain logistics", "cost reduction"]),
+            ("Expertise in network administration, including configuring routers, switches, and firewalls.", ["network administration", "routers", "switches", "firewalls"]),
+            ("Applied statistical analysis to interpret experimental data and formulate conclusions.", ["statistical analysis", "experimental data interpretation"]),
+            ("Provided technical support to end-users, troubleshooting hardware and software issues.", ["technical support", "troubleshooting", "hardware", "software"]),
+            ("Skilled in negotiation and client relationship management, fostering long-term partnerships.", ["negotiation", "client relationship management"]),
+            ("Developed mobile applications for iOS using Swift and Xcode, ensuring responsive user experience.", ["mobile application development", "ios", "swift", "xcode"]),
+            ("Proficient in Java, Python, and Data Structures. Experience in cloud platforms like AWS.", ["java", "python", "data structures", "aws"]),
+            ("Worked on Machine Learning algorithms and Deep Learning frameworks using TensorFlow and PyTorch.", ["machine learning", "deep learning", "tensorflow", "pytorch"]),
+            ("Experienced in frontend development with HTML5, CSS3, and React. Basic knowledge of Git.", ["html5", "css3", "react", "git"]),
+            ("Led DevOps projects using Jenkins and Docker for automated CI/CD pipelines.", ["devops", "jenkins", "docker", "ci/cd"]),
+            ("Managed databases using MySQL and PostgreSQL. Familiar with ORM tools like Hibernate.", ["mysql", "postgresql", "hibernate"]),
+            ("Built mobile apps using Swift and React Native. Hands-on with Xcode.", ["swift", "react native", "xcode"]),
+            ("Handled backend systems using Django and Flask. Implemented RESTful APIs.", ["django", "flask", "restful apis"]),
+            ("Collaborated in Agile environments. Strong Communication and Time Management skills.", ["agile", "communication", "time management"]),
+            ("Experience in cybersecurity with tools like Wireshark, Metasploit, and Kali Linux.", ["wireshark", "metasploit", "kali linux", "cybersecurity"]),
+            ("Worked with SAP ERP modules and integrated financial reports using Excel and Tableau.", ["sap", "excel", "tableau"]),
+            ("Expertise in Photoshop, Illustrator, and Adobe XD for UI/UX design.", ["photoshop", "illustrator", "adobe xd", "ui/ux design"]),
+            ("Involved in academic research using MATLAB and LaTeX. Familiar with academic writing.", ["matlab", "latex", "academic writing"]),
+            ("Conducted market research and email marketing using HubSpot and Google Analytics.", ["hubspot", "google analytics", "email marketing", "market research"]),
+            ("Led cross-functional teams using Jira for project tracking and Scrum methodologies.", ["jira", "scrum", "project tracking"]),
+            ("Created 3D models using AutoCAD and SolidWorks. Simulated stress tests.", ["autocad", "solidworks"]),
+            ("No technical skills mentioned in this sentence.", []),
+            ("The weather is sunny today.", []),
+            ("I enjoy hiking and reading books.", []),
+        ]        
 
         # Prepare examples for the scorer using explicit reference and predicted docs
         examples = []

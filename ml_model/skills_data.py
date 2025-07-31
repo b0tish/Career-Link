@@ -4,9 +4,10 @@ skills_domain = [
     "swift", "kotlin", "go", "rust", "typescript", "scala", "perl", "matlab", "octave",
     # Web Technologies
     "html", "css", "react", "angular", "vue", "node.js", "express", "django",
-    "flask", "spring", "bootstrap", "jquery", "webgl", "web3",
+    "flask", "spring", "bootstrap", "jquery", "webgl", "web3","html5","css3",
     # Databases
     "mysql", "postgresql", "mongodb", "sqlite", "oracle", "redis", "cassandra",
+    "hibernate", "jpa", "entity framework", "sequelize", "prisma", "sqlalchemy",
     # Cloud & DevOps
     "aws", "azure", "google cloud", "docker", "kubernetes", "jenkins", "git", "celery",
     "terraform", "ansible", "ci/cd", "devops", "aws sagemaker", "google ai platform",
@@ -62,6 +63,10 @@ skills_domain = [
     "music production", "composition", "mastering", "mixing", "audio engineering",
     "live sound", "acoustics", "room treatment", "microphone techniques",
     "recording studio setup", "music theory", "harmony", "counterpoint", "orchestration",
+    # Development Tools & IDEs
+    "xcode", "visual studio", "intellij idea", "eclipse", "netbeans", "atom", "sublime text",
+    "vscode", "vim", "emacs", "notepad++", "brackets", "webstorm", "phpstorm", "pycharm",
+    "rider", "clion", "android studio", "xamarin", "flutter", "react native",
     # Project Management
     "agile", "scrum", "kanban", "waterfall", "lean", "six sigma", "jira", "confluence",
     "slack", "trello", "asana", "project planning", "resource allocation",
@@ -152,23 +157,6 @@ skills_domain = [
     "optimization algorithms", "simulation modeling", "discrete-event simulation",
     "monte carlo simulation", "six sigma green belt", "six sigma black belt",
     "lean manufacturing", "total quality management", "tqm", "iso 9001", "iso 27001",
-    # Soft Skills & Communication
-    "communication", "problem-solving", "active listening", "empathy", "troubleshooting",
-    "complaint resolution", "product knowledge", "ticketing systems", "phone etiquette",
-    "email communication", "live chat support", "service recovery", "verbal communication",
-    "written communication", "presentation skills", "public speaking", "interpersonal skills",
-    "technical writing", "critical thinking", "analytical skills", "root cause analysis",
-    "decision making", "creative solutions", "strategic thinking", "resourcefulness",
-    "motivation", "mentoring", "delegation", "performance management", "coaching",
-    "strategic vision", "time management", "prioritization", "multitasking",
-    "attention to detail", "record keeping", "meeting coordination", "filing systems",
-    "workflow optimization", "client relations", "customer service", "negotiation skills",
-    "conflict resolution", "mediation", "arbitration", "influencing", "persuasion",
-    "emotional intelligence", "cultural intelligence", "diversity & inclusion", "dei",
-    "team building", "conflict management", "stress management", "feedback skills",
-    "coaching skills", "motivational interviewing", "positive psychology", "mindfulness",
-    "resilience building", "self-awareness", "self-regulation", "social awareness",
-    "relationship management",
     # Healthcare & Medical
     "patient care", "electronic health records", "ehr", "pharmacology", "hipaa",
     "diagnostic testing", "patient education", "clinical research", "data management",

@@ -13,9 +13,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 model_path = os.path.join(BASE_DIR, "ml_model", "skill_ner_model")
 nlp = spacy.load(model_path)
 
-client = MongoClient("mongodb://localhost:27017/")  # NEW
-db = client["career_link"]                          # NEW
-job_collection = db["jobs"]                         # NEW
+client = MongoClient("mongodb://localhost:27017/") 
+db = client["career_link"]                         
+job_collection = db["jobs"]                        
 
 def extract_text_from_pdf(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
@@ -25,9 +25,41 @@ def extract_text_from_pdf(pdf_file):
     return text
 
 def extract_skills(text):
+    """
+    Extract skills with improved post-processing to handle case sensitivity
+    and common variations that the model might miss.
+    """
+    # First, get skills from the NER model
     doc = nlp(text)
-    skills = list({ent.text.lower() for ent in doc.ents if ent.label_ == "SKILL"})
-    return skills
+    ner_skills = list({ent.text.lower() for ent in doc.ents if ent.label_ == "SKILL"})
+    
+    # Post-processing: check for skills that might have been missed due to case sensitivity
+    text_lower = text.lower()
+    additional_skills = []
+    
+    # Import skills list (you might need to adjust the path)
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'ml_model'))
+    from skills_data import skills_domain
+    
+    for skill in skills_domain:
+        skill_lower = skill.lower().strip()
+        if not skill_lower:
+            continue
+            
+        # Check if skill is in text but wasn't detected by NER
+        if skill_lower in text_lower and skill_lower not in ner_skills:
+            # Verify it's a whole word match
+            import re
+            pattern = r'\b' + re.escape(skill_lower).replace(r'\ ', r'\s+') + r'\b'
+            if re.search(pattern, text_lower):
+                additional_skills.append(skill_lower)
+    
+    # Combine and deduplicate
+    all_skills = list(set(ner_skills + additional_skills))
+    
+    return all_skills
 
 def compute_match_score(user_skills, job_skills):  # NEW
     if not user_skills or not job_skills:
