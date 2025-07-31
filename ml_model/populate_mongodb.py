@@ -1,9 +1,13 @@
 import pandas as pd
-import re
 from pymongo import MongoClient
 import spacy
+from dotenv import load_dotenv
+import os
 import json
 from skills_data import skills_domain
+
+load_dotenv()
+MONGODB_URI = os.getenv("MONGODB_URI")
 
 # Load trained spaCy model
 nlp = spacy.load("./skill_ner_model")
@@ -23,7 +27,7 @@ def extract_skills(text: str):
 
 
 # Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")
+client = MongoClient(MONGODB_URI)
 db = client["career_link"]
 collection = db["jobs"]
 
@@ -56,8 +60,8 @@ for _, row in df.iterrows():
         "required_skills": extracted_skills
     }
 
-    print(json.dumps(job_doc, indent=2))
-    print("=" * 60)
+    # print(json.dumps(job_doc, indent=2))
+    # print("=" * 60)
 
     # Insert into MongoDB
     collection.insert_one(job_doc)

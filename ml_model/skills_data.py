@@ -1,4 +1,5 @@
 skills_domain = [
+    "hubspot","latex"
     # Programming Languages
     "python", "java", "javascript", "c++", "c#", "c", "r", "sql", "php", "ruby",
     "swift", "kotlin", "go", "rust", "typescript", "scala", "perl", "matlab", "octave",
@@ -40,7 +41,7 @@ skills_domain = [
     "research software engineering", "data science engineering", "machine learning engineering",
     "r programming", "sas programming", "spss programming", "stata", "simulink", "mle", "mlo",
     # Design & Multimedia
-    "adobe creative suite", "adobe photoshop", "adobe premiere", "adobe xd", "illustrator",
+    "adobe creative suite", "adobe photoshop", "adobe premiere", "adobe xd", "illustrator","photoshop",
     "figma", "sketch", "corel draw", "final cut pro", "ux design", "ui design",
     "wireframing", "prototyping", "user research", "usability testing",
     "information architecture", "interaction design", "visual design", "typography",
@@ -91,7 +92,7 @@ skills_domain = [
     "intrusion prevention systems", "ips", "encryption", "data loss prevention", "dlp",
     "identity & access management", "iam", "single sign-on", "sso",
     "multi-factor authentication", "mfa", "physical security", "disaster recovery",
-    "business continuity planning", "regulatory compliance",
+    "business continuity planning", "regulatory compliance","wireshark", "metasploit","kali linux",
     # Software Engineering & Testing
     "quality assurance", "software testing", "test automation", "unit testing",
     "integration testing", "system testing", "user acceptance testing", "uat",
@@ -217,6 +218,7 @@ skills_domain = [
     "document management systems", "dms", "enterprise content management", "ecm",
     "web content management", "wcm", "metadata management", "taxonomy development",
     "controlled vocabularies", "ontology engineering", "semantic web", "linked data",
+    "communication", "public speaking", "presentation skills",
     # Legal
     "estate planning", "trust administration", "litigation", "medicaid planning",
     "asset protection", "will drafting", "advance directives", "court appearances",

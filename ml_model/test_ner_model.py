@@ -172,7 +172,7 @@ def test_ner_model(model_path="skill_ner_model"):
 
         print("\n--- NER Model Predictions (for visual inspection) ---")
         # Keep some visual inspection for individual sentences
-        for i, (text, _) in enumerate(gold_raw_data[:30], 1): # Display first 5 for brevity
+        for i, (text, _) in enumerate(gold_raw_data, 1): # Display first 5 for brevity
             doc = trained_nlp(text)
             print(f"\nTest Case {i}:")
             print(f"Input: {text}")

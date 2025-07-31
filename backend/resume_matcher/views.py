@@ -6,6 +6,11 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from rest_framework import status
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+MONGODB_URI = os.getenv("MONGODB_URI")
 
 # Load trained spaCy model once
 # Get the absolute path to the model directory
@@ -13,7 +18,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 model_path = os.path.join(BASE_DIR, "ml_model", "skill_ner_model")
 nlp = spacy.load(model_path)
 
-client = MongoClient("mongodb://localhost:27017/") 
+client = MongoClient(MONGODB_URI)
 db = client["career_link"]                         
 job_collection = db["jobs"]                        
 
