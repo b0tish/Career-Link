@@ -11,64 +11,7 @@ const Index = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showJobs, setShowJobs] = useState(false);
-
-  const mockJobs = [
-    {
-      id: "1",
-      title: "Senior Frontend Developer",
-      company: "TechCorp Inc.",
-      location: "San Francisco, CA",
-      type: "Full-time",
-      salary: "$120k - $160k",
-      posted: "2 days ago",
-      description: "Join our dynamic team to build cutting-edge web applications using React, TypeScript, and modern frontend technologies.",
-      match: 95
-    },
-    {
-      id: "2",
-      title: "UX/UI Designer",
-      company: "Design Studios",
-      location: "New York, NY",
-      type: "Full-time",
-      salary: "$90k - $120k",
-      posted: "1 day ago",
-      description: "Create beautiful and intuitive user experiences for our suite of digital products. Experience with Figma and user research required.",
-      match: 88
-    },
-    {
-      id: "3",
-      title: "Product Manager",
-      company: "InnovateLab",
-      location: "Austin, TX",
-      type: "Full-time",
-      salary: "$110k - $140k",
-      posted: "3 days ago",
-      description: "Lead product strategy and execution for our AI-powered platform. Strong technical background and stakeholder management skills needed.",
-      match: 82
-    },
-    {
-      id: "4",
-      title: "Data Scientist",
-      company: "Analytics Pro",
-      location: "Seattle, WA",
-      type: "Full-time",
-      salary: "$130k - $170k",
-      posted: "1 day ago",
-      description: "Apply machine learning and statistical analysis to solve complex business problems. Python, SQL, and cloud experience required.",
-      match: 79
-    },
-    {
-      id: "5",
-      title: "DevOps Engineer",
-      company: "CloudTech Solutions",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$115k - $145k",
-      posted: "4 days ago",
-      description: "Build and maintain scalable infrastructure using Kubernetes, AWS, and CI/CD pipelines. Security and automation focus.",
-      match: 76
-    }
-  ];
+  const [jobs, setJobs] = useState([]);
 
   const scrollToUpload = () => {
     const uploadSection = document.getElementById('upload-section');
@@ -81,20 +24,37 @@ const Index = () => {
     setUploadedFile(file);
   };
 
-  const handleProcess = () => {
+  const handleProcess = async () => {
+    if (!uploadedFile) return;
+
     setIsProcessing(true);
-    // Simulate processing time
-    setTimeout(() => {
+    const formData = new FormData();
+    formData.append('resume', uploadedFile);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/upload/', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setJobs(data.top_jobs);
+        setShowJobs(true);
+        setTimeout(() => {
+          const jobsSection = document.getElementById('jobs-section');
+          if (jobsSection) {
+            jobsSection.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      } else {
+        console.error('Error uploading file');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
       setIsProcessing(false);
-      setShowJobs(true);
-      // Scroll to jobs section
-      setTimeout(() => {
-        const jobsSection = document.getElementById('jobs-section');
-        if (jobsSection) {
-          jobsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    }, 3000);
+    }
   };
 
   const handleHomeClick = () => {
@@ -162,7 +122,7 @@ const Index = () => {
                   </div>
                   
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {mockJobs.map((job) => (
+                    {jobs.map((job) => (
                       <JobCard key={job.id} job={job} />
                     ))}
                   </div>

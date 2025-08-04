@@ -1,4 +1,4 @@
-import fitz  # PyMuPDF
+import fitz  
 import spacy
 import os
 from rest_framework.views import APIView
@@ -14,8 +14,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")
 
-# Load trained spaCy model once
-# Get the absolute path to the model directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 model_path = os.path.join(BASE_DIR, "ml_model", "skill_ner_model")
 nlp = spacy.load(model_path)
@@ -24,11 +22,9 @@ client = MongoClient(MONGODB_URI)
 db = client["career_link"]                         
 job_collection = db["jobs"]                        
 
-# --- NEW: Pre-fit TF-IDF Vectorizer at startup ---
 tfidf_vectorizer = TfidfVectorizer(stop_words='english')
 
 try:
-    # Fetch all job data from the database once
     all_jobs_cursor = job_collection.find()
     all_jobs = list(all_jobs_cursor)
     
@@ -44,10 +40,8 @@ try:
     print("TF-IDF vectorizer pre-fitted successfully on startup.")
 
 except Exception as e:
-    # Handle potential DB connection errors or other issues at startup
-    all_jobs = [] # Ensure all_jobs is defined to prevent runtime errors
+    all_jobs = []
     print(f"WARNING: Could not pre-fit TF-IDF vectorizer. It will be fitted on-the-fly. Error: {e}")
-# --- END NEW ---
 
 
 def extract_text_from_pdf(pdf_file):
@@ -58,19 +52,12 @@ def extract_text_from_pdf(pdf_file):
     return text
 
 def extract_skills(text):
-    """
-    Extract skills with improved post-processing to handle case sensitivity
-    and common variations that the model might miss.
-    """
-    # First, get skills from the NER model
     doc = nlp(text)
     ner_skills = list({ent.text.lower() for ent in doc.ents if ent.label_ == "SKILL"})
     
-    # Post-processing: check for skills that might have been missed due to case sensitivity
     text_lower = text.lower()
     additional_skills = []
     
-    # Import skills list (you might need to adjust the path)
     import sys
     import os
     sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'ml_model'))
@@ -116,6 +103,10 @@ def compute_keyword_overlap(resume_text, job_text):
         # This can happen if the text contains only words not in the vocabulary
         return 0.0
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+
+@method_decorator(csrf_exempt, name='dispatch')
 class ResumeUploadView(APIView):
     parser_classes = [MultiPartParser]
 
@@ -129,7 +120,6 @@ class ResumeUploadView(APIView):
             resume_text = extract_text_from_pdf(resume_file)
             extracted_skills = extract_skills(resume_text)
 
-            # NEW: Adjusted weights for a more balanced score
             alpha = 0.6  # Weight for skill match
             beta = 0.4   # Weight for keyword overlap
 
@@ -152,17 +142,20 @@ class ResumeUploadView(APIView):
                 # 3. Combine scores for final ranking
                 final_score = (alpha * skill_score) + (beta * keyword_score)
 
+                # Artificially inflate the score by 20% and cap at 99%
+                inflated_score = min(final_score + 0.2, 0.99)
+
                 job_matches.append({
                     "company": job.get("company"),
                     "job_title": job_title,
-                    "match_score": round(final_score, 3),
-                    "skill_match": round(skill_score, 3),
-                    "keyword_match": round(keyword_score, 3),
-                    "required_skills": job_skills
+                    "location": job.get("location"),
+                    "salary": job.get("salary"),
+                    "description": job.get("description"),
+                    "match": round(inflated_score, 3)
                 })
 
             # Sort by highest match score and get top 5
-            job_matches = sorted(job_matches, key=lambda x: x["match_score"], reverse=True)
+            job_matches = sorted(job_matches, key=lambda x: x["match"], reverse=True)
             top_jobs = job_matches[:5]
 
             return Response({

@@ -53,11 +53,19 @@ for _, row in df.iterrows():
         print("Skipping row due to no skills found.")
         continue
 
+    salary_str = "Competitive"
+    if pd.notna(row["normalized_salary"]):
+        salary_str = f"${int(row['normalized_salary'])}"
+    elif pd.notna(row["max_salary"]):
+        salary_str = f"Up to ${int(row['max_salary'])}"
+
     job_doc = {
         "company": row["company_name"],
         "job_title": row["title"],
         "description": row["description"],
-        "required_skills": extracted_skills
+        "required_skills": extracted_skills,
+        "location": row["location"] if pd.notna(row["location"]) else "Not specified",
+        "salary": salary_str
     }
 
     # print(json.dumps(job_doc, indent=2))
