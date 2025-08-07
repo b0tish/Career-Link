@@ -9,6 +9,7 @@ def get_aligned_entities(nlp_model, text, gold_skills):
     """
     Generates aligned (start_char, end_char, label) entities for a given text
     and list of gold skill strings, based on the nlp_model's tokenizer.
+    Case-insensitive matching for better alignment.
     """
     doc = nlp_model.make_doc(text)
     entities = []
@@ -16,6 +17,7 @@ def get_aligned_entities(nlp_model, text, gold_skills):
 
     for skill in gold_skills:
         skill_lower = skill.lower().strip()
+        # Create case-insensitive pattern
         pattern = r'\b' + re.escape(skill_lower) + r'\b'
         pattern = pattern.replace(r'\ ', r'\s+') # Handle spaces in multi-word skills
 
@@ -65,51 +67,70 @@ def test_ner_model(model_path="skill_ner_model"):
 
         # The raw text and the list of actual skills
         gold_raw_data = [
-            ("Developed a full-stack solution using React for the frontend and Node.js for the backend. Deployed with Docker and Kubernetes.", ["react", "node.js", "docker", "kubernetes"]),
-            ("My role involved data analysis with Python, using libraries like Pandas and NumPy. I also have experience with SQL.", ["data analysis", "python", "pandas", "numpy", "sql"]),
-            ("I have no relevant skills.", []),
-            ("The team used Agile methodologies, specifically Scrum, to manage the project. We tracked our work in JIRA.", ["agile", "scrum", "jira"]),
-            ("I am proficient in Microsoft Office, including Excel and Word.", ["microsoft office", "excel", "word"]),
-            ("The project required knowledge of cloud computing, specifically AWS and Azure.", ["cloud computing", "aws", "azure"]),
-            ("I have experience with machine learning, using TensorFlow and PyTorch.", ["machine learning", "tensorflow", "pytorch"]),
-            ("Built RESTful APIs using Django and Flask, and managed deployments with Docker and Kubernetes.", ["django", "flask", "docker", "kubernetes", "restful apis"]),
-            ("Designed and implemented user interfaces with Figma and Sketch, focusing on user-centered design principles.", ["figma", "sketch", "user-centered design"]),
-            ("Expert in digital marketing strategies, including SEO, SEM, and content creation for social media platforms.", ["digital marketing", "seo", "sem", "content creation", "social media"]),
-            ("Administered patient care, managed electronic health records (EHR), and provided critical care support.", ["patient care", "electronic health records", "ehr", "critical care"]),
-            ("Developed comprehensive lesson plans for high school students, utilizing Google Classroom and differentiated instruction.", ["lesson planning", "google classroom", "differentiated instruction"]),
-            ("Successfully led cross-functional teams in software development life cycles and quality assurance.", ["team leadership", "software development life cycle", "quality assurance"]),
-            ("Conducted in-depth market research and competitive analysis to identify new business opportunities.", ["market research", "competitive analysis"]),
-            ("Optimized cloud infrastructure on AWS and handled database administration for PostgreSQL.", ["cloud infrastructure", "aws", "database administration", "postgresql"]),
-            ("Skilled in financial reporting, budgeting, and risk management for enterprise-level operations.", ["financial reporting", "budgeting", "risk management"]),
-            ("Implemented cybersecurity protocols and conducted vulnerability assessments to protect sensitive data.", ["cybersecurity", "vulnerability assessments"]),
-            ("Created engaging visual designs using Adobe Creative Suite, including Photoshop and Illustrator.", ["adobe creative suite", "photoshop", "illustrator", "visual design"]),
-            ("Facilitated training sessions and workshops, demonstrating strong presentation and public speaking skills.", ["training", "workshops", "presentation skills", "public speaking"]),
-            ("Analyzed large datasets using R and Pandas to derive actionable insights for strategic decision-making.", ["r", "pandas", "data analysis", "strategic decision-making"]),
-            ("Managed supplier relationships and optimized supply chain logistics for cost reduction.", ["supplier relationship management", "supply chain logistics", "cost reduction"]),
-            ("Expertise in network administration, including configuring routers, switches, and firewalls.", ["network administration", "routers", "switches", "firewalls"]),
-            ("Applied statistical analysis to interpret experimental data and formulate conclusions.", ["statistical analysis", "experimental data interpretation"]),
-            ("Provided technical support to end-users, troubleshooting hardware and software issues.", ["technical support", "troubleshooting", "hardware", "software"]),
-            ("Skilled in negotiation and client relationship management, fostering long-term partnerships.", ["negotiation", "client relationship management"]),
-            ("Developed mobile applications for iOS using Swift and Xcode, ensuring responsive user experience.", ["mobile application development", "ios", "swift", "xcode"]),
-            ("Proficient in Java, Python, and Data Structures. Experience in cloud platforms like AWS.", ["java", "python", "data structures", "aws"]),
-            ("Worked on Machine Learning algorithms and Deep Learning frameworks using TensorFlow and PyTorch.", ["machine learning", "deep learning", "tensorflow", "pytorch"]),
-            ("Experienced in frontend development with HTML5, CSS3, and React. Basic knowledge of Git.", ["html5", "css3", "react", "git"]),
-            ("Led DevOps projects using Jenkins and Docker for automated CI/CD pipelines.", ["devops", "jenkins", "docker", "ci/cd"]),
-            ("Managed databases using MySQL and PostgreSQL. Familiar with ORM tools like Hibernate.", ["mysql", "postgresql", "hibernate"]),
-            ("Built mobile apps using Swift and React Native. Hands-on with Xcode.", ["swift", "react native", "xcode"]),
-            ("Handled backend systems using Django and Flask. Implemented RESTful APIs.", ["django", "flask", "restful apis"]),
-            ("Collaborated in Agile environments. Strong Communication and Time Management skills.", ["agile", "communication", "time management"]),
-            ("Experience in cybersecurity with tools like Wireshark, Metasploit, and Kali Linux.", ["wireshark", "metasploit", "kali linux", "cybersecurity"]),
-            ("Worked with SAP ERP modules and integrated financial reports using Excel and Tableau.", ["sap", "excel", "tableau"]),
-            ("Expertise in Photoshop, Illustrator, and Adobe XD for UI/UX design.", ["photoshop", "illustrator", "adobe xd", "ui/ux design"]),
-            ("Involved in academic research using MATLAB and LaTeX. Familiar with academic writing.", ["matlab", "latex", "academic writing"]),
-            ("Conducted market research and email marketing using HubSpot and Google Analytics.", ["hubspot", "google analytics", "email marketing", "market research"]),
-            ("Led cross-functional teams using Jira for project tracking and Scrum methodologies.", ["jira", "scrum", "project tracking"]),
-            ("Created 3D models using AutoCAD and SolidWorks. Simulated stress tests.", ["autocad", "solidworks"]),
-            ("No technical skills mentioned in this sentence.", []),
-            ("The weather is sunny today.", []),
-            ("I enjoy hiking and reading books.", []),
-        ]        
+            # Data Science & Analytics Examples
+            ("Implemented advanced machine learning models using TensorFlow and PyTorch for computer vision applications.", ["machine learning", "tensorflow", "pytorch", "computer vision"]),
+            ("Built data pipelines using Apache Spark and Kafka for real-time streaming analytics and big data processing.", ["apache spark", "kafka", "real-time streaming analytics", "big data"]),
+            ("Created interactive dashboards using Tableau and Power BI for business intelligence and data visualization.", ["tableau", "power bi", "business intelligence", "data visualization"]),
+            ("Performed statistical analysis using R and Python for hypothesis testing and predictive modeling.", ["statistical analysis", "r", "python", "hypothesis testing", "predictive modeling"]),
+            
+            # Cloud & DevOps Examples
+            ("Deployed microservices architecture on AWS using ECS, Lambda functions, and API Gateway with Terraform.", ["microservices architecture", "aws", "ecs", "lambda functions", "api gateway", "terraform"]),
+            ("Implemented CI/CD pipelines using GitHub Actions and Docker for automated testing and deployment.", ["ci/cd", "github actions", "docker", "automated testing"]),
+            ("Managed Kubernetes clusters on Google Cloud Platform using GKE and Helm charts for container orchestration.", ["kubernetes", "google cloud platform", "gke", "helm", "container orchestration"]),
+            ("Set up monitoring stack using Prometheus, Grafana, and Alertmanager for observability and alerting.", ["prometheus", "grafana", "alertmanager", "observability", "alerting"]),
+            
+            # Web Development Examples
+            ("Developed full-stack applications using React, Node.js, and PostgreSQL with RESTful API design.", ["full-stack applications", "react", "node.js", "postgresql", "restful api"]),
+            ("Built responsive web applications using Angular, TypeScript, and Bootstrap with progressive web app features.", ["responsive web applications", "angular", "typescript", "bootstrap", "progressive web app"]),
+            ("Created dynamic websites using Vue.js, Laravel, and MySQL with authentication and authorization.", ["dynamic websites", "vue.js", "laravel", "mysql", "authentication", "authorization"]),
+            ("Implemented GraphQL APIs using Apollo Server and MongoDB with real-time subscriptions.", ["graphql", "apollo server", "mongodb", "real-time subscriptions"]),
+            
+            # Mobile Development Examples
+            ("Built cross-platform mobile applications using Flutter and Dart with Firebase backend services.", ["cross-platform mobile applications", "flutter", "dart", "firebase"]),
+            ("Developed native iOS applications using Swift and Xcode with Core Data for local storage.", ["native ios applications", "swift", "xcode", "core data"]),
+            ("Created Android applications using Kotlin and Android Studio with Room database integration.", ["android applications", "kotlin", "android studio", "room database"]),
+            ("Implemented push notifications and in-app messaging using Firebase Cloud Messaging.", ["push notifications", "in-app messaging", "firebase cloud messaging"]),
+            
+            # Database & Backend Examples
+            ("Designed scalable database architectures using MySQL, Redis, and Elasticsearch for high-performance applications.", ["scalable database architectures", "mysql", "redis", "elasticsearch", "high-performance applications"]),
+            ("Implemented data warehousing solutions using Snowflake and dbt for ETL processes and analytics.", ["data warehousing", "snowflake", "dbt", "etl processes", "analytics"]),
+            ("Built NoSQL database systems using MongoDB and Cassandra for distributed data storage.", ["nosql database systems", "mongodb", "cassandra", "distributed data storage"]),
+            ("Created API gateways using Kong and OAuth2.0 for secure authentication and rate limiting.", ["api gateways", "kong", "oauth2.0", "secure authentication", "rate limiting"]),
+            
+            # AI & Machine Learning Examples
+            ("Trained deep learning models using TensorFlow and Keras for natural language processing tasks.", ["deep learning", "tensorflow", "keras", "natural language processing"]),
+            ("Implemented computer vision solutions using OpenCV and PyTorch for image classification and object detection.", ["computer vision", "opencv", "pytorch", "image classification", "object detection"]),
+            ("Built recommendation systems using collaborative filtering and matrix factorization algorithms.", ["recommendation systems", "collaborative filtering", "matrix factorization"]),
+            ("Developed chatbot applications using Rasa and Dialogflow with natural language understanding.", ["chatbot applications", "rasa", "dialogflow", "natural language understanding"]),
+            
+            # Security & Networking Examples
+            ("Implemented cybersecurity measures using penetration testing and vulnerability assessment tools.", ["cybersecurity", "penetration testing", "vulnerability assessment"]),
+            ("Configured network security using firewalls and intrusion detection systems for threat prevention.", ["network security", "firewalls", "intrusion detection systems", "threat prevention"]),
+            ("Set up identity and access management using OAuth2.0 and JWT tokens for secure authentication.", ["identity and access management", "oauth2.0", "jwt", "secure authentication"]),
+            ("Implemented encryption and data loss prevention strategies for compliance and security.", ["encryption", "data loss prevention", "compliance", "security"]),
+            
+            # Project Management Examples
+            ("Led agile development teams using Scrum methodology and Jira for project tracking and sprint planning.", ["agile development", "scrum", "jira", "project tracking", "sprint planning"]),
+            ("Managed cross-functional teams using Kanban boards and Confluence for documentation and collaboration.", ["cross-functional teams", "kanban", "confluence", "documentation", "collaboration"]),
+            ("Implemented DevOps practices using Git, Jenkins, and Ansible for continuous integration and deployment.", ["devops", "git", "jenkins", "ansible", "continuous integration", "deployment"]),
+            ("Coordinated stakeholder communication using Slack and Microsoft Teams for remote team collaboration.", ["stakeholder communication", "slack", "microsoft teams", "remote team collaboration"]),
+            
+            # Business Intelligence Examples
+            ("Created executive dashboards using Power BI and Tableau for key performance indicators and reporting.", ["executive dashboards", "power bi", "tableau", "key performance indicators", "reporting"]),
+            ("Implemented business intelligence solutions using SQL Server and SSRS for data analysis and visualization.", ["business intelligence", "sql server", "ssrs", "data analysis", "visualization"]),
+            ("Developed data storytelling techniques using Python and Matplotlib for presentation and communication.", ["data storytelling", "python", "matplotlib", "presentation", "communication"]),
+            ("Built predictive analytics models using scikit-learn and pandas for forecasting and trend analysis.", ["predictive analytics", "scikit-learn", "pandas", "forecasting", "trend analysis"]),
+            
+            # Negative Examples (should not extract skills)
+            ("I am passionate about learning new technologies and adapting to changing environments.", []),
+            ("She demonstrates excellent leadership qualities and strong communication skills in team settings.", []),
+            ("He has a proven track record of delivering high-quality results under pressure.", []),
+            ("The company culture emphasizes innovation, collaboration, and continuous improvement.", []),
+            ("She excels at problem-solving and enjoys working in fast-paced, dynamic environments.", []),
+            ("He is committed to professional development and staying current with industry trends.", []),
+            ("The team works effectively together and maintains high standards of quality.", []),
+            ("She has a strong work ethic and consistently meets project deadlines.", [])
+        ]
 
         # Prepare examples for the scorer using explicit reference and predicted docs
         examples = []
@@ -172,7 +193,7 @@ def test_ner_model(model_path="skill_ner_model"):
 
         print("\n--- NER Model Predictions (for visual inspection) ---")
         # Keep some visual inspection for individual sentences
-        for i, (text, _) in enumerate(gold_raw_data, 1): # Display first 5 for brevity
+        for i, (text, gold_skills) in enumerate(gold_raw_data, 1): # Display first 5 for brevity
             doc = trained_nlp(text)
             print(f"\nTest Case {i}:")
             print(f"Input: {text}")
@@ -183,6 +204,14 @@ def test_ner_model(model_path="skill_ner_model"):
                     print(f" - {skill}")
             else:
                 print(" - No skills found by NER model.")
+            pred_skills = set([ent.text.lower().strip() for ent in doc.ents if ent.label_ == "SKILL"])
+            gold_skills_set = set([s.lower().strip() for s in gold_skills])
+            missed = gold_skills_set - pred_skills
+            extra = pred_skills - gold_skills_set
+            if missed:
+                print(f"Test Case {i}: Missed skills: {missed}")
+            if extra:
+                print(f"Test Case {i}: Extra (false positive) skills: {extra}")
 
         # Test the enhanced skill detection function separately
         # print("\n--- ENHANCED SKILL DETECTION (using generate_data.py function) ---")

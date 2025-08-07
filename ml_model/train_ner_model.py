@@ -64,69 +64,67 @@ def get_optimizer_with_custom_lr(nlp_model, base_lr=0.0008, new_model_lr=0.001):
 def create_training_example(nlp_model, text, skill_list):
     """
     Creates a spaCy training example by finding skills in text and creating entities.
-    This version is improved to handle case sensitivity and create more robust training examples.
+    Improved: more robust to punctuation, whitespace, and case.
+    Logs missed skills for debugging.
     """
     doc = nlp_model.make_doc(text)
     entities = []
     text_lower = text.lower()
+    missed_skills = []
 
     for skill in skill_list:
         skill_lower = skill.lower().strip()
         if not skill_lower:
             continue
-
-        # Create multiple patterns to handle different case variations
-        patterns = []
         
-        # Original skill pattern
-        base_pattern = r'\b' + re.escape(skill_lower).replace(r'\ ', r'\s+') + r'\b'
-        patterns.append(base_pattern)
+        # More flexible pattern that handles various cases
+        # Handle multi-word skills with flexible spacing and punctuation
+        skill_words = skill_lower.split()
+        if len(skill_words) == 1:
+            # Single word skill - match with word boundaries and case variations
+            pattern = r'\b' + re.escape(skill_lower) + r'\b'
+            # Also try title case and uppercase variations
+            if skill_lower != skill_lower.title():
+                pattern += r'|\b' + re.escape(skill_lower.title()) + r'\b'
+            if skill_lower != skill_lower.upper():
+                pattern += r'|\b' + re.escape(skill_lower.upper()) + r'\b'
+        else:
+            # Multi-word skill - allow flexible spacing and punctuation
+            base_pattern = r'\b' + r'[\s\W]*'.join([re.escape(word) for word in skill_words]) + r'\b'
+            pattern = base_pattern
+            # Also try title case for first word
+            title_words = [skill_words[0].title()] + skill_words[1:]
+            title_pattern = r'\b' + r'[\s\W]*'.join([re.escape(word) for word in title_words]) + r'\b'
+            pattern += r'|' + title_pattern
         
-        # Handle common variations like "Python" vs "python"
-        if skill_lower != skill_lower.title():
-            title_pattern = r'\b' + re.escape(skill_lower.title()).replace(r'\ ', r'\s+') + r'\b'
-            patterns.append(title_pattern)
+        found = False
+        for match in re.finditer(pattern, text_lower):
+            start, end = match.span()
+            span = doc.char_span(start, end, alignment_mode="expand")
+            if span is not None:
+                entities.append((span.start_char, span.end_char, "SKILL"))
+                found = True
         
-        # Handle acronyms (all caps)
-        if skill_lower.isupper() or len(skill_lower.split()) == 1:
-            caps_pattern = r'\b' + re.escape(skill_lower.upper()).replace(r'\ ', r'\s+') + r'\b'
-            patterns.append(caps_pattern)
-        
-        for pattern in patterns:
-            try:
-                # Search in both lowercase and original text
-                for match in re.finditer(pattern, text_lower):
-                    start, end = match.span()
-                    # Align match with token boundaries.
-                    char_span = doc.char_span(start, end, alignment_mode="expand")
-                    if char_span is not None:
-                        entities.append((char_span.start_char, char_span.end_char, "SKILL"))
-                
-                # Also search in original text for case-sensitive matches
-                for match in re.finditer(pattern, text):
-                    start, end = match.span()
-                    char_span = doc.char_span(start, end, alignment_mode="expand")
-                    if char_span is not None:
-                        entities.append((char_span.start_char, char_span.end_char, "SKILL"))
-                        
-            except re.error as e:
-                print(f"Warning: Regex error for skill '{skill}' with pattern '{pattern}': {e}")
-
-    # Remove duplicates and sort entities to handle overlaps correctly.
-    # Sort by start index (ascending) and then by end index (descending).
-    # This ensures that for overlapping entities starting at the same point, the longest one comes first.
-    unique_entities = sorted(list(set(entities)), key=lambda x: (x[0], -x[1]))
-
-    # Filter out overlapping entities, keeping the longest ones.
-    filtered_entities = []
-    current_end = -1
-    for start, end, label in unique_entities:
-        # If the current entity doesn't overlap with the last one added, add it.
-        if start >= current_end:
-            filtered_entities.append((start, end, label))
-            current_end = end
-
-    return (text, {"entities": filtered_entities})
+        if not found:
+            missed_skills.append(skill)
+    
+    # Merge overlapping/adjacent entities
+    entities = sorted(list(set(entities)), key=lambda x: x[0])
+    merged = []
+    for ent in entities:
+        if not merged:
+            merged.append(ent)
+        else:
+            last = merged[-1]
+            if ent[0] <= last[1] + 1:  # overlap or adjacent
+                merged[-1] = (last[0], max(last[1], ent[1]), last[2])
+            else:
+                merged.append(ent)
+    
+    if missed_skills:
+        print(f"Missed skills in training example: {missed_skills} for text: {text}")
+    
+    return Example.from_dict(doc, {"entities": [(start, end, label) for start, end, label in merged]})
 
 def filter_valid_entities(nlp_model, text, entities):
     """
@@ -227,7 +225,7 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
             restore_from_backup(backup_path, model_output_path)
         return
         
-    df = pd.read_csv(data_path)
+    df = pd.read_csv(data_path, on_bad_lines='skip')
 
     skills_domain_set = {skill.lower() for skill in skills_domain}
 
@@ -244,7 +242,15 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
                     continue
 
                 # Filter skills to only include those from our curated list
-                cleaned_skills = [skill for skill in skills if skill.lower().strip() in skills_domain_set]
+                # Make case-insensitive comparison
+                cleaned_skills = []
+                for skill in skills:
+                    skill_lower = skill.lower().strip()
+                    # Check if skill exists in domain (case-insensitive)
+                    if any(skill_lower == domain_skill.lower() for domain_skill in skills_domain_set):
+                        cleaned_skills.append(skill)
+                    else:
+                        print(f"Skill '{skill}' not found in skills domain")
                 
                 # This now includes examples with no skills, which act as negative examples
                 processed_raw_data.append((text, cleaned_skills))
@@ -262,8 +268,10 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
         Train_data.append(example)
 
     cleaned_train_data = []
-    for text, ann in Train_data:
-        entities = ann.get("entities", [])
+    for example in Train_data:
+        # Extract text and entities from the Example object
+        text = example.reference.text
+        entities = [(ent.start_char, ent.end_char, ent.label_) for ent in example.reference.ents]
         filtered_ents = filter_valid_entities(training_nlp, text, entities)
         if filtered_ents:
             if check_alignment(training_nlp, text, filtered_ents):
@@ -345,9 +353,9 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
         val_examples_spacy = get_spacy_examples(val_examples)
         scores = training_nlp.evaluate(val_examples_spacy)
 
-        current_f1 = scores.get("ents_f", 0.0)
-        current_precision = scores.get("ents_p", 0.0)
-        current_recall = scores.get("ents_r", 0.0)
+        current_f1 = scores.get("ents_f", 0.0) or 0.0
+        current_precision = scores.get("ents_p", 0.0) or 0.0
+        current_recall = scores.get("ents_r", 0.0) or 0.0
 
         print(f"Epoch {epoch+1} - Training Loss (NER): {losses.get('ner', 0):.4f}")
         print(f"Validation Metrics: Precision={current_precision:.4f}, Recall={current_recall:.4f}, F1-score={current_f1:.4f}")
@@ -377,4 +385,4 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
             print(f"⚠️ Error cleaning up backup: {e}")
 
 if __name__ == "__main__":
-    train_ner_model(data_path="raw_data.csv")
+    train_ner_model(data_path="./raw_data.csv")
