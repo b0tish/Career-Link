@@ -18,7 +18,7 @@ interface JobCardProps {
 
 export function JobCard({ job }: JobCardProps) {
 	return (
-		<Card className="p-6 bg-gradient-card backdrop-blur-sm border border-white/20 hover:shadow-glass transition-all duration-300 hover:scale-105 group">
+		<Card className="p-6 border transition-all duration-300 hover:scale-105 group">
 			<div className="flex items-start justify-between mb-4">
 				<div className="flex items-center space-x-4">
 					<div>
@@ -29,8 +29,9 @@ export function JobCard({ job }: JobCardProps) {
 					</div>
 				</div>
 				<div className="text-right">
-					<div className="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 text-accent font-semibold text-sm">
-						{Math.ceil(job.match * 100)}% Match
+					<div className="inline-flex items-center px-3 py-1 rounded-full bg-accent text-accent-foreground font-semibold text-sm">
+						<span>{Math.ceil(job.match * 100)}%</span>
+						<span>Match</span>
 					</div>
 				</div>
 			</div>

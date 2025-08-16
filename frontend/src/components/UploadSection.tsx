@@ -42,14 +42,14 @@ export function UploadSection({ onFileUpload, onProcess, uploadedFile, isProcess
   return (
     <section id="upload-section" className="py-20 px-6">
       <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-4xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
+        <h2 className="text-4xl font-bold mb-4 text-primary">
           Upload Your Documents
         </h2>
         <p className="text-xl text-muted-foreground mb-12">
           Upload your resume, cover letter, or career documents to get personalized job matches.
         </p>
 
-        <Card className="p-8 bg-gradient-card backdrop-blur-sm border border-white/20 shadow-glass">
+        <Card className="p-8 border">
           <div
             className={`relative border-2 border-dashed rounded-2xl p-12 transition-all duration-300 ${
               dragActive
@@ -70,7 +70,7 @@ export function UploadSection({ onFileUpload, onProcess, uploadedFile, isProcess
             />
             
             <div className="flex flex-col items-center space-y-4">
-              <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center">
+              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
                 <Upload className="w-8 h-8 text-white" />
               </div>
               <div>
@@ -85,11 +85,11 @@ export function UploadSection({ onFileUpload, onProcess, uploadedFile, isProcess
           </div>
 
           {uploadedFile && (
-            <div className="mt-8 p-6 bg-accent/10 rounded-2xl border border-accent/20">
+            <div className="mt-8 p-6 bg-accent rounded-2xl border border-accent/20">
               <div className="flex items-center justify-center space-x-3">
-                <CheckCircle className="w-6 h-6 text-accent" />
+                <CheckCircle className="w-6 h-6 text-accent-foreground" />
                 <div className="text-center">
-                  <p className="font-semibold text-accent">File uploaded successfully!</p>
+                  <p className="font-semibold text-accent-foreground">File uploaded successfully!</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     <FileText className="w-4 h-4 inline mr-1" />
                     {uploadedFile.name} • {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
