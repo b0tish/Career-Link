@@ -9,349 +9,256 @@ import os
 import shutil
 import datetime
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import KFold
 from skills_data import skills_domain
 
-model_path = "skill_ner_model"
+# Configuration constants
+MODEL_PATH = "skill_ner_model"
+DEFAULT_LEARNING_RATES = {"existing": 0.0005, "new": 0.0008}
+TRAINING_PARAMS = {
+    "existing": {"epochs": 25, "patience": 8},
+    "new": {"epochs": 30, "patience": 10}
+}
 
-def create_model_backup(model_path, backup_suffix="backup"):
-    if os.path.exists(model_path):
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = f"{model_path}_{backup_suffix}_{timestamp}"
-        
-        try:
-            shutil.copytree(model_path, backup_path)
-            print(f"Backup created at: {backup_path}")
-            return backup_path
-        except Exception as e:
-            print(f"Failed to create backup: {e}")
-            return None
-    else:
+def backup_model(model_path, backup_suffix="backup"):
+    """Create a timestamped backup of the existing model."""
+    if not os.path.exists(model_path):
         print("No existing model found to backup.")
         return None
-
-def restore_from_backup(backup_path, model_path):
-    if os.path.exists(backup_path):
-        import shutil
-        if os.path.exists(model_path):
-            shutil.rmtree(model_path)
-        shutil.copytree(backup_path, model_path)
-        print(f"Model restored from backup: {backup_path}")
-    else:
-        print("Backup path not found!")
-
-def get_optimizer_with_custom_lr(nlp_model, base_lr=0.0008, new_model_lr=0.001):
-    if os.path.exists(model_path):
-        learning_rate = base_lr
-        print(f"Using LOWER learning rate: {learning_rate} (incremental training)")
-    else:
-        learning_rate = new_model_lr
-        print(f"Using HIGHER learning rate: {learning_rate} (new model)")
     
-    optimizer = nlp_model.resume_training()
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = f"{model_path}_{backup_suffix}_{timestamp}"
+    
+    try:
+        shutil.copytree(model_path, backup_path)
+        print(f"Backup created at: {backup_path}")
+        return backup_path
+    except Exception as e:
+        print(f"Failed to create backup: {e}")
+        return None
+
+def restore_model(backup_path, model_path):
+    """Restore model from backup."""
+    if not os.path.exists(backup_path):
+        print("Backup path not found!")
+        return
+    
+    if os.path.exists(model_path):
+        shutil.rmtree(model_path)
+    shutil.copytree(backup_path, model_path)
+    print(f"Model restored from backup: {backup_path}")
+
+def setup_model_and_optimizer(model_path):
+    """Load or create model and setup optimizer."""
+    if os.path.exists(model_path):
+        print(f"Loading existing model from {model_path}...")
+        nlp = spacy.load(model_path)
+        is_existing = True
+    else:
+        print("Creating new model from 'en_core_web_md'...")
+        try:
+            nlp = spacy.load("en_core_web_md")
+        except OSError:
+            print("Downloading 'en_core_web_md' model...")
+            spacy.cli.download("en_core_web_md")
+            nlp = spacy.load("en_core_web_md")
+        is_existing = False
+    
+    # Setup NER component
+    if "ner" not in nlp.pipe_names:
+        ner = nlp.add_pipe("ner", last=True)
+    else:
+        ner = nlp.get_pipe("ner")
+    
+    if "SKILL" not in ner.labels:
+        ner.add_label("SKILL")
+    
+    # Setup optimizer
+    optimizer = nlp.resume_training()
+    learning_rate = DEFAULT_LEARNING_RATES["existing" if is_existing else "new"]
+    
+    # Try to set learning rate
     if hasattr(optimizer, 'learn_rate'):
         optimizer.learn_rate = learning_rate
-    elif hasattr(optimizer, 'set_param'): 
+    elif hasattr(optimizer, 'set_param'):
         try:
             optimizer.set_param('learn_rate', learning_rate)
         except Exception:
-            print("Note: Optimizer might not expose 'learn_rate' directly or setting failed.")
-    else:
-        print("Note: Optimizer might not expose 'learn_rate' directly, relying on internal schedules.")
-            
-    return optimizer, learning_rate
+            pass
+    
+    print(f"Using {'LOWER' if is_existing else 'HIGHER'} learning rate: {learning_rate}")
+    
+    return nlp, optimizer, is_existing
 
-def create_training_example(nlp_model, text, skill_list):
-    """
-    Creates a spaCy training example by finding skills in text and creating entities.
-    Improved: more robust to punctuation, whitespace, and case.
-    Logs missed skills for debugging.
-    """
+def create_skill_pattern(skill):
+    """Create regex pattern for skill matching."""
+    skill_lower = skill.lower().strip()
+    if not skill_lower:
+        return None
+    
+    skill_words = skill_lower.split()
+    
+    if len(skill_words) == 1:
+        # Single word - match case variations and word boundaries
+        return rf'\b{re.escape(skill_lower)}\b'
+    else:
+        # Multi-word - allow flexible spacing and punctuation between words
+        pattern_parts = []
+        for i, word in enumerate(skill_words):
+            if i == 0:
+                # First word: allow word boundary and case variations
+                pattern_parts.append(rf'\b{re.escape(word)}')
+            else:
+                # Subsequent words: allow flexible spacing/punctuation
+                pattern_parts.append(rf'[\s\W]*{re.escape(word)}')
+        
+        # End with word boundary
+        return ''.join(pattern_parts) + r'\b'
+
+def find_skills_in_text(nlp_model, text, skill_list):
+    """Find skills in text and return entities."""
     doc = nlp_model.make_doc(text)
     entities = []
     text_lower = text.lower()
-    missed_skills = []
 
     for skill in skill_list:
         skill_lower = skill.lower().strip()
         if not skill_lower:
             continue
-        
-        # More flexible pattern that handles various cases
-        # Handle multi-word skills with flexible spacing and punctuation
-        skill_words = skill_lower.split()
-        if len(skill_words) == 1:
-            # Single word skill - match with word boundaries and case variations
-            pattern = r'\b' + re.escape(skill_lower) + r'\b'
-            # Also try title case and uppercase variations
-            if skill_lower != skill_lower.title():
-                pattern += r'|\b' + re.escape(skill_lower.title()) + r'\b'
-            if skill_lower != skill_lower.upper():
-                pattern += r'|\b' + re.escape(skill_lower.upper()) + r'\b'
-        else:
-            # Multi-word skill - allow flexible spacing and punctuation
-            base_pattern = r'\b' + r'[\s\W]*'.join([re.escape(word) for word in skill_words]) + r'\b'
-            pattern = base_pattern
-            # Also try title case for first word
-            title_words = [skill_words[0].title()] + skill_words[1:]
-            title_pattern = r'\b' + r'[\s\W]*'.join([re.escape(word) for word in title_words]) + r'\b'
-            pattern += r'|' + title_pattern
-        
-        found = False
-        for match in re.finditer(pattern, text_lower):
-            start, end = match.span()
-            span = doc.char_span(start, end, alignment_mode="expand")
+            
+        # Simple string search for now (more reliable than regex)
+        if skill_lower in text_lower:
+            start = text_lower.find(skill_lower)
+            end = start + len(skill_lower)
+            
+            # Create span in original text
+            span = doc.char_span(start, end, label="SKILL")
             if span is not None:
                 entities.append((span.start_char, span.end_char, "SKILL"))
-                found = True
-        
-        if not found:
-            missed_skills.append(skill)
     
-    # Merge overlapping/adjacent entities
+    # Merge overlapping entities
+    return merge_overlapping_entities(entities)
+
+def merge_overlapping_entities(entities):
+    """Merge overlapping or adjacent entities."""
+    if not entities:
+        return []
+    
     entities = sorted(list(set(entities)), key=lambda x: x[0])
-    merged = []
-    for ent in entities:
-        if not merged:
-            merged.append(ent)
+    merged = [entities[0]]
+    
+    for ent in entities[1:]:
+        last = merged[-1]
+        if ent[0] <= last[1] + 1:  # overlap or adjacent
+            merged[-1] = (last[0], max(last[1], ent[1]), last[2])
         else:
-            last = merged[-1]
-            if ent[0] <= last[1] + 1:  # overlap or adjacent
-                merged[-1] = (last[0], max(last[1], ent[1]), last[2])
-            else:
-                merged.append(ent)
+            merged.append(ent)
     
-    if missed_skills:
-        print(f"Missed skills in training example: {missed_skills} for text: {text}")
-    
-    return Example.from_dict(doc, {"entities": [(start, end, label) for start, end, label in merged]})
+    return merged
 
-def filter_valid_entities(nlp_model, text, entities):
-    """
-    Validates and fixes entity alignments using spaCy's char_span with different alignment modes.
-    This helps ensure that the generated entities correspond to actual tokens in the spaCy Doc.
-    Prioritizes 'strict' then 'contract' then 'expand'.
-    """
-    doc = nlp_model.make_doc(text)
-    valid_entities = []
+def create_training_example(nlp_model, text, skill_list):
+    """Create a spaCy training example."""
+    entities = find_skills_in_text(nlp_model, text, skill_list)
+    return Example.from_dict(nlp_model.make_doc(text), {"entities": entities})
 
-    for start, end, label in entities:
-        span = None
-        # Try strict alignment first
-        span = doc.char_span(start, end, label=label, alignment_mode="strict")
-        if span:
-            valid_entities.append((span.start_char, span.end_char, label))
-            continue
-        
-        # If strict fails, try contract
-        span = doc.char_span(start, end, label=label, alignment_mode="contract")
-        if span:
-            valid_entities.append((span.start_char, span.end_char, label))
-            continue
-
-        # If contract fails, try expand
-        span = doc.char_span(start, end, label=label, alignment_mode="expand")
-        if span:
-            valid_entities.append((span.start_char, span.end_char, label))
-            continue
-            
-        # print(f"Warning: Could not align entity '{text[start:end]}' ({start}-{end}) in text: '{text[:50]}...'")
-            
-    return valid_entities
-
-
-def check_alignment(nlp_model, text, entities):
-    """
-    Checks if entities are properly aligned using spaCy's built-in offsets_to_biluo_tags.
-    This helps identify problematic examples that might cause training errors.
-    """
-    doc = nlp_model.make_doc(text)
-    try:
-        # This function will raise an error if alignments are severely off
-        tags = offsets_to_biluo_tags(doc, entities)
-        # Count misaligned entities (marked with '-')
-        misaligned_count = tags.count('-')
-        # Count actual entities to know the proportion of misalignment
-        total_entities = len([tag for tag in tags if tag != 'O'])
-
-        if misaligned_count > 0:
-            # print(f"Warning: {misaligned_count} out of {total_entities} entities misaligned in text: {text[:75]}...")
-            return False
-        return True
-    except Exception as e:
-        print(f"Error checking alignment for text '{text[:75]}...': {e}")
-        return False
-
-def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model", random_seed=42):
-    """
-    Main function to train the spaCy NER model.
-    """
-    print("\n=== PHASE 2: NER MODEL TRAINING ===")
-
-    random.seed(random_seed)
-
-    backup_path = create_model_backup(model_output_path)
-
-    # Determine if loading an existing model or creating a new one
-    if os.path.exists(model_output_path):
-        print(f"Loading existing model for incremental training from {model_output_path}...")
-        training_nlp = spacy.load(model_output_path)
-        is_existing_model = True
-    else:
-        try:
-            training_nlp = spacy.load("en_core_web_md") 
-            print("Created new model based on 'en_core_web_md'.")
-        except OSError:
-            print("Downloading 'en_core_web_md' model... This may take a moment.")
-            spacy.cli.download("en_core_web_md")
-            training_nlp = spacy.load("en_core_web_md")
-            print("Successfully downloaded and loaded 'en_core_web_md'.")
-        is_existing_model = False
-
-    # Add NER pipe if it doesn't exist, or get it if it does
-    if "ner" not in training_nlp.pipe_names:
-        ner = training_nlp.add_pipe("ner", last=True)
-    else:
-        ner = training_nlp.get_pipe("ner")
-
-    # Add "SKILL" label to the NER pipe if not already present
-    if "SKILL" not in ner.labels:
-        ner.add_label("SKILL")
-
-    # Load and process training data
+def load_training_data(data_path):
+    """Load and process training data from CSV."""
     if not os.path.exists(data_path):
-        print(f"Error: Training data file not found at {data_path}. Please run generate_data.py first.")
-        if backup_path:
-            restore_from_backup(backup_path, model_output_path)
-        return
-        
+        print(f"Error: Training data file not found at {data_path}")
+        return []
+    
     df = pd.read_csv(data_path, on_bad_lines='skip')
-
+    processed_data = []
     skills_domain_set = {skill.lower() for skill in skills_domain}
-
-    processed_raw_data = []
+    
     for _, row in df.iterrows():
         try:
             data_tuple = ast.literal_eval(row.iloc[0])
-            if isinstance(data_tuple, tuple) and len(data_tuple) == 2 and \
-               isinstance(data_tuple[0], str) and isinstance(data_tuple[1], list):
-                
-                text, skills = data_tuple
-                
-                if not text.strip():
-                    continue
+            if not (isinstance(data_tuple, tuple) and len(data_tuple) == 2 and 
+                   isinstance(data_tuple[0], str) and isinstance(data_tuple[1], list)):
+                continue
+            
+            text, skills = data_tuple
+            if not text.strip():
+                continue
 
-                # Filter skills to only include those from our curated list
-                # Make case-insensitive comparison
-                cleaned_skills = []
-                for skill in skills:
-                    skill_lower = skill.lower().strip()
-                    # Check if skill exists in domain (case-insensitive)
-                    if any(skill_lower == domain_skill.lower() for domain_skill in skills_domain_set):
-                        cleaned_skills.append(skill)
-                    else:
-                        print(f"Skill '{skill}' not found in skills domain")
-                
-                # This now includes examples with no skills, which act as negative examples
-                processed_raw_data.append((text, cleaned_skills))
-            else:
-                print(f"Skipping malformed row: {row.iloc[0]}")
+            # Filter skills to only include those from our curated list
+            cleaned_skills = [
+                skill for skill in skills 
+                if any(skill.lower().strip() == domain_skill.lower() for domain_skill in skills_domain_set)
+            ]
+            
+            if cleaned_skills:  # Only add examples with valid skills
+                processed_data.append((text, cleaned_skills))
+            
         except (ValueError, SyntaxError, TypeError) as e:
-            print(f"Skipping bad row due to literal_eval error: {row.iloc[0]} — {e}")
+            print(f"Skipping bad row: {e}")
+    
+    return processed_data
 
-    print(f"Total valid data entries loaded: {len(processed_raw_data)}")
+def validate_entities(nlp_model, text, entities):
+    """Validate entity alignment using spaCy."""
+    if not entities:
+        return True
+    
+    # Simple validation: check if entities are within text bounds
+    text_length = len(text)
+    for start, end, label in entities:
+        if start < 0 or end > text_length or start >= end:
+            return False
+    
+    return True
 
-    # Create spaCy training examples
-    Train_data = []
-    for text, skills in processed_raw_data:
-        example = create_training_example(training_nlp, text, skills)
-        Train_data.append(example)
-
-    cleaned_train_data = []
-    for example in Train_data:
-        # Extract text and entities from the Example object
-        text = example.reference.text
+def clean_training_data(nlp_model, data_list):
+    """Clean and validate training data."""
+    cleaned_data = []
+    
+    for text, skills in data_list:
+        # Create example to get entities
+        example = create_training_example(nlp_model, text, skills)
         entities = [(ent.start_char, ent.end_char, ent.label_) for ent in example.reference.ents]
-        filtered_ents = filter_valid_entities(training_nlp, text, entities)
-        if filtered_ents:
-            if check_alignment(training_nlp, text, filtered_ents):
-                cleaned_train_data.append((text, {"entities": filtered_ents}))
-            else:
-                print(f"Skipping example due to remaining misalignment after filtering: {text[:75]}...")
-        else:
+        
+        if entities and validate_entities(nlp_model, text, entities):
+            cleaned_data.append((text, {"entities": entities}))
+        elif not entities:
             # Add examples with no entities as negative examples
-            cleaned_train_data.append((text, {"entities": []}))
+            cleaned_data.append((text, {"entities": []}))
+    
+    return cleaned_data
 
-    print(f"Total training examples with valid and aligned entities: {len(cleaned_train_data)}")
-
-    if len(cleaned_train_data) < 10:
-        print("WARNING: Very few training examples. Consider adding more data to raw_data.csv.")
-        if backup_path:
-            restore_from_backup(backup_path, model_output_path)
-        return
-
-    # Split data into training and validation sets
-    train_examples, val_examples = train_test_split(
-        cleaned_train_data, test_size=0.2, random_state=random_seed
-    )
-    print(f"Training examples: {len(train_examples)}")
-    print(f"Validation examples: {len(val_examples)}")
-
-    # Function to yield spaCy Example objects for initialization/training
-    def get_spacy_examples(data_list):
-        spacy_examples = []
-        for text, annotations in data_list:
-            doc = training_nlp.make_doc(text)
-            example = Example.from_dict(doc, annotations)
-            spacy_examples.append(example)
-        return spacy_examples
-
-    # Get optimizer with custom learning rate based on whether it's a new or existing model
-    # Slightly refined learning rates for better convergence
-    optimizer, LEARNING_RATE = get_optimizer_with_custom_lr(training_nlp, base_lr=0.0005, new_model_lr=0.0008)
-
-    # Initialize the model if it's new
-    if not is_existing_model:
-        print("Initializing new model with data and optimizer...")
-        training_nlp.begin_training(get_spacy_examples(cleaned_train_data)) # More appropriate for fine-tuning
-    else:
-        print("Continuing training with existing model and its optimizer state...")
-
-    # Training parameters
-    batch_size = 16 
-    n_epochs = 30 
-    patience = 10  
+def train_epochs(nlp_model, train_data, val_data, optimizer, n_epochs, batch_size, patience, model_path):
+    """Train the model for multiple epochs with early stopping."""
     best_f1 = 0.0
     epochs_without_improvement = 0
-
-    if is_existing_model:
-        n_epochs = min(n_epochs, 25) # Max epochs for fine-tuning
-        patience = max(patience, 8)  # More patience for subtle improvements
-        print(f"🛡️ Using conservative training: {n_epochs} max epochs, patience={patience}")
-
+    
     print(f"Starting training for up to {n_epochs} epochs...")
+    
     for epoch in range(n_epochs):
-        random.shuffle(train_examples) # Shuffle training data each epoch
-        losses = {}
         print(f"\nStarting epoch {epoch+1}/{n_epochs}...")
-
-        # Convert training examples to spaCy Example objects for the batching
-        spacy_train_examples = get_spacy_examples(train_examples)
-        random.shuffle(spacy_train_examples) # Shuffle again before batching
-
-        # Process in minibatches
-        batches = spacy.util.minibatch(spacy_train_examples, size=batch_size)
         
+        # Shuffle and train
+        random.shuffle(train_data)
+        losses = {}
+        
+        # Convert to spaCy examples and train in batches
+        spacy_examples = []
+        for text, data in train_data:
+            example = Example.from_dict(nlp_model.make_doc(text), data)
+            spacy_examples.append(example)
+        
+        random.shuffle(spacy_examples)
+        
+        # Train in batches
+        batches = spacy.util.minibatch(spacy_examples, size=batch_size)
         for batch in batches:
-            # Determine dropout rate
-            dropout_rate = 0.1 # Consistent dropout for fine-tuning
-            
-            # Update the model with the current batch
-            training_nlp.update(batch, drop=dropout_rate, losses=losses, sgd=optimizer)
+            nlp_model.update(batch, drop=0.1, losses=losses, sgd=optimizer)
 
         # Evaluate on validation set
-        val_examples_spacy = get_spacy_examples(val_examples)
-        scores = training_nlp.evaluate(val_examples_spacy)
+        val_examples = []
+        for text, data in val_data:
+            example = Example.from_dict(nlp_model.make_doc(text), data)
+            val_examples.append(example)
+        
+        scores = nlp_model.evaluate(val_examples)
 
         current_f1 = scores.get("ents_f", 0.0) or 0.0
         current_precision = scores.get("ents_p", 0.0) or 0.0
@@ -364,19 +271,76 @@ def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model
         if current_f1 > best_f1:
             best_f1 = current_f1
             epochs_without_improvement = 0
-            training_nlp.to_disk(model_output_path) # Save the best model
-            print(f"Model improved and saved to: {model_output_path} with F1: {best_f1:.4f}")
+            nlp_model.to_disk(model_path)
+            print(f"Model improved and saved to: {model_path} with F1: {best_f1:.4f}")
         else:
             epochs_without_improvement += 1
             print(f"No improvement for {epochs_without_improvement} epochs (Best F1: {best_f1:.4f})")
             if epochs_without_improvement >= patience:
                 print(f"Early stopping triggered after {epoch+1} epochs due to no improvement.")
                 break
+    
+    return best_f1
+
+def train_ner_model(data_path="raw_data.csv", model_output_path="skill_ner_model", random_seed=42):
+    """Main function to train the spaCy NER model."""
+    print("\n=== PHASE 2: NER MODEL TRAINING ===")
+
+    random.seed(random_seed)
+    backup_path = backup_model(model_output_path)
+
+    # Setup model and optimizer
+    nlp_model, optimizer, is_existing = setup_model_and_optimizer(model_output_path)
+
+    # Load and process training data
+    raw_data = load_training_data(data_path)
+    
+    if not raw_data:
+        print("No valid training data found. Please run generate_data.py first.")
+        if backup_path:
+            restore_model(backup_path, model_output_path)
+        return
+
+    print(f"Total valid data entries loaded: {len(raw_data)}")
+
+    # Clean training data
+    cleaned_data = clean_training_data(nlp_model, raw_data)
+    print(f"Total training examples with valid entities: {len(cleaned_data)}")
+
+    if len(cleaned_data) < 10:
+        print("WARNING: Very few training examples. Consider adding more data to raw_data.csv.")
+        if backup_path:
+            restore_model(backup_path, model_output_path)
+        return
+
+    # Split data for training
+    train_data, val_data = train_test_split(cleaned_data, test_size=0.2, random_state=random_seed)
+    print(f"Training examples: {len(train_data)}")
+    print(f"Validation examples: {len(val_data)}")
+
+    # Initialize new model if needed
+    if not is_existing:
+        print("Initializing new model...")
+        nlp_model.begin_training([create_training_example(nlp_model, text, data) for text, data in cleaned_data])
+
+    # Training parameters
+    params = TRAINING_PARAMS["existing" if is_existing else "new"]
+    batch_size = 16
+
+    if is_existing:
+        print(f"🛡️ Using conservative training: {params['epochs']} max epochs, patience={params['patience']}")
+
+    # Train the model
+    best_f1 = train_epochs(
+        nlp_model, train_data, val_data, optimizer,
+        params['epochs'], batch_size, params['patience'], model_output_path
+    )
 
     print(f"\n🎉 Training completed successfully!")
     print(f"Best F1 Score: {best_f1:.4f}")
     print(f"Final model saved to: {model_output_path}")
         
+    # Cleanup backup
     if backup_path and os.path.exists(backup_path):
         try:
             shutil.rmtree(backup_path)

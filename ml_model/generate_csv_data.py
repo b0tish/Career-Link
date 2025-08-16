@@ -5,97 +5,113 @@ import re
 import ast
 import os
 import PyPDF2
-from skills_data import skills_domain # Import from skills_data.py
-from tqdm import tqdm
+from skills_data import skills_domain
 from functools import lru_cache
 
+# Global constants
 nlp = spacy.load("en_core_web_sm")
 
-keywords = [
+KEYWORDS = [
     "experience", "project", "management", "responsibility", "responsible",
     "work history", "work experience", "job description", "summary",
     "role", "tasks", "positions", "certification", "abilities", "skills",
     "technical skills", "communication", "team", "agile", "collaborate",
-    "led", "specialized","handled","implemented","delivered"
+    "led", "specialized", "handled", "implemented", "delivered"
 ]
 
+SPECIAL_CHARS = "/&#+."
+
 def clean_html(text):
+    """Clean HTML tags and normalize whitespace."""
     return re.sub(r"<[^>]+>|\s+", " ", str(text)).strip()
 
 def extract_text_from_pdf(pdf_path):
-    text = ""
+    """Extract text content from PDF file."""
     try:
         with open(pdf_path, "rb") as f:
             reader = PyPDF2.PdfReader(f)
-            for page_num in range(len(reader.pages)):
-                text += reader.pages[page_num].extract_text()
+            return " ".join(page.extract_text() for page in reader.pages)
     except Exception as e:
         print(f"Error reading PDF {pdf_path}: {e}")
-    return text
+        return ""
 
-def extract_relevant_sentences(text,min_word_count=5):
+def extract_relevant_sentences(text, min_word_count=5):
+    """Extract sentences containing relevant keywords."""
     if pd.isna(text) or not text:
         return []
 
     text = clean_html(text)
-    doc = nlp(text) # Use the general nlp model for sentence segmentation
-
-    keyword_lemmas = set(keywords)
+    doc = nlp(text)
+    keyword_lemmas = set(KEYWORDS)
 
     relevant_sents = []
     for sent in doc.sents:
         lemmas = {token.lemma_.lower() for token in sent if not token.is_stop and not token.is_punct}
-        if keyword_lemmas.intersection(lemmas) and len(sent.text.split()) >= min_word_count:
+        if (keyword_lemmas.intersection(lemmas) and 
+            len(sent.text.split()) >= min_word_count):
             cleaned = sent.text.strip()
             if cleaned and not cleaned.isspace():
                 relevant_sents.append(cleaned)
 
     return relevant_sents
+
+def create_skill_variations(skill):
+    """Create variations of a skill for better matching."""
+    skill_clean = skill.strip().lower()
+    variations = [skill_clean]
     
+    # Add dotless version
+    if "." in skill:
+        dotless = skill.replace(".", "").lower()
+        variations.append(dotless)
+    
+    # Add spaced version for special characters
+    if any(c in skill for c in SPECIAL_CHARS):
+        spaced = re.sub(r"[\/&#+.]", " ", skill_clean)
+        spaced = re.sub(r"\s+", " ", spaced).strip()
+        variations.append(spaced)
+    
+    return variations
 
 @lru_cache(maxsize=1)
 def build_skill_matcher(skill_list):
+    """Build a phrase matcher for skills with caching."""
     temp_nlp = spacy.blank("en")
     matcher = PhraseMatcher(temp_nlp.vocab, attr="LOWER")
     
     patterns = []
     normalized_map = {}
-
-
+    
+    # Sort by length (longest first) to avoid partial matches
     sorted_skill_list = sorted(skill_list, key=len, reverse=True)
 
     for skill in sorted_skill_list:
-        skill_clean = skill.strip().lower()
-        normalized_map[skill_clean] = skill
-        patterns.append(temp_nlp.make_doc(skill_clean))
-        if "." in skill:
-            dotless = skill.replace(".", "").lower()
-            if dotless not in normalized_map:
-                normalized_map[dotless] = skill
-                patterns.append(temp_nlp.make_doc(dotless))
-
-        if any(c in skill for c in "/&#+."):
-            spaced = re.sub(r"[\/&#+.]", " ", skill_clean)
-            spaced = re.sub(r"\s+", " ", spaced).strip()
-            if spaced not in normalized_map:
-                normalized_map[spaced] = skill
-                patterns.append(temp_nlp.make_doc(spaced))
+        variations = create_skill_variations(skill)
+        
+        for variation in variations:
+            if variation not in normalized_map:
+                normalized_map[variation] = skill
+                patterns.append(temp_nlp.make_doc(variation))
 
     matcher.add("SKILL", patterns)
     return matcher, temp_nlp, normalized_map
 
+def clean_text_for_matching(text):
+    """Clean and normalize text for skill matching."""
+    processed = re.sub(r"[^\w\s.+#/&-]", " ", text)
+    return re.sub(r"\s+", " ", processed).strip()
+
 def add_skills_to_sentences(sentences, skill_list=skills_domain):
+    """Extract skills from sentences using phrase matching and regex fallback."""
     if not sentences:
         return []
 
-    matcher, temp_nlp, normalized_map = build_skill_matcher(tuple(skill_list))  # make hashable for cache
+    matcher, temp_nlp, normalized_map = build_skill_matcher(tuple(skill_list))
     full_text = " ".join(sentences).lower()
-    
-    # Clean text
-    processed = re.sub(r"[^\w\s.+#/&-]", " ", full_text)
-    processed = re.sub(r"\s+", " ", processed).strip()
+    processed = clean_text_for_matching(full_text)
     doc = temp_nlp.make_doc(processed)
 
+    # Primary matching using phrase matcher
     matches = matcher(doc)
     matched_skills = set()
 
@@ -104,80 +120,70 @@ def add_skills_to_sentences(sentences, skill_list=skills_domain):
         if span_text in normalized_map:
             matched_skills.add(normalized_map[span_text])
 
-    # Fallback: regex for flexible/partial matches (only if nothing found)
+    # Fallback: regex for flexible/partial matches
     if not matched_skills:
-        for skill in skill_list:
-            pattern = r"\b" + re.escape(skill.lower()).replace(r"\ ", r"\s+") + r"\b"
-            if re.search(pattern, processed):
-                matched_skills.add(skill)
+        matched_skills = find_skills_with_regex(processed, skill_list)
 
     return sorted(matched_skills)
 
 def find_skills_with_regex(text, skills_list):
+    """Find skills using regex patterns as fallback."""
     found_skills = set()
     text_lower = text.lower()
     
     for skill in skills_list:
         skill_lower = skill.lower()
         
-        # Escape special characters in the skill name for regex
+        # Create regex pattern with word boundaries
         escaped_skill = re.escape(skill_lower)
-        
-        # Replace escaped spaces with \s+ to match one or more whitespace characters
-        # This helps with skills like "Machine Learning" where there might be varying spaces
-        pattern = escaped_skill.replace(r'\ ', r'\s+')
-        
-        # Add word boundaries to ensure whole word matches
-        pattern = r'\b' + pattern + r'\b'
+        pattern = r'\b' + escaped_skill.replace(r'\ ', r'\s+') + r'\b'
         
         try:
             if re.search(pattern, text_lower):
                 found_skills.add(skill)
         except re.error:
-            # Fallback for complex regex patterns that might cause errors,
-            # or simply check for substring presence if regex fails.
+            # Fallback for complex patterns
             if skill_lower in text_lower:
-                # Further refine by checking if it's a "word" match (e.g., not part of another word)
                 words = re.findall(r'\b\w+\b', text_lower)
-                if skill_lower in words or any(skill_lower in word for word in words):
+                if (skill_lower in words or 
+                    any(skill_lower in word for word in words)):
                     found_skills.add(skill)
+    
     return found_skills
 
+def clean_sentences(sentences):
+    """Clean and join sentences into a single text."""
+    if isinstance(sentences, list):
+        cleaned_sentences = [re.sub(r'\s+', ' ', s.strip()) for s in sentences]
+        return " ".join(cleaned_sentences)
+    else:
+        return re.sub(r'\s+', ' ', str(sentences).strip())
+
+def clean_skills(skills):
+    """Clean and validate skills list."""
+    if isinstance(skills, list):
+        return [re.sub(r'\\', '', str(s)) for s in skills]
+    return []
+
 def cleaned_text(raw):
-    """
-    Cleans raw data extracted from CSV/PDF, ensuring it's in (text, skills_list) format.
-    Handles various input formats and potential errors from literal_eval.
-    """
+    """Clean raw data ensuring it's in (text, skills_list) format."""
     try:
         parsed = ast.literal_eval(raw)
-        if isinstance(parsed, tuple) and len(parsed) == 2:
-            sentences = parsed[0]
-            skills = parsed[1]
-            
-            if isinstance(sentences, list):
-                # Join list of sentences into a single string
-                cleaned_sentences = [re.sub(r'\s+', ' ', s.strip()) for s in sentences]
-                full_text = " ".join(cleaned_sentences)
-            else:
-                # If 'sentences' is already a string, just clean it
-                full_text = re.sub(r'\s+', ' ', str(sentences).strip())
-            
-            if isinstance(skills, list):
-                # Clean up any escaped characters in skills
-                cleaned_skills = [re.sub(r'\\', '', str(s)) for s in skills]
-            else:
-                cleaned_skills = [] # Ensure skills is a list
-            
-            return (full_text, cleaned_skills)
-        else:
-            # If parsed content is not a 2-element tuple, return empty
+        if not (isinstance(parsed, tuple) and len(parsed) == 2):
             return ("", [])
+        
+        sentences, skills = parsed
+        full_text = clean_sentences(sentences)
+        cleaned_skills = clean_skills(skills)
+        
+        return (full_text, cleaned_skills)
+        
     except (ValueError, SyntaxError, TypeError) as e:
-        # Catch errors during literal_eval
         print(f"Skipping bad row: {raw} — {e}")
         return ("", [])
 
 def process_csv_data(csv_path, output_csv):
+    """Process CSV data and extract relevant sentences and skills."""
     if not os.path.exists(csv_path):
         print(f"CSV file not found at {csv_path}")
         return
@@ -196,6 +202,7 @@ def process_csv_data(csv_path, output_csv):
         print(f"Error processing CSV data: {e}")
 
 def process_pdf_data(pdf_root_dir, output_csv):
+    """Process PDF files and extract relevant sentences and skills."""
     if not os.path.exists(pdf_root_dir):
         print(f"PDF folder not found: {pdf_root_dir}")
         return
@@ -208,6 +215,7 @@ def process_pdf_data(pdf_root_dir, output_csv):
             try:
                 path = os.path.join(root, file)
                 print(f"📘 Reading {file}...")
+                
                 text = extract_text_from_pdf(path)
                 if text:
                     sentences = extract_relevant_sentences(text)
@@ -219,6 +227,7 @@ def process_pdf_data(pdf_root_dir, output_csv):
                 print(f"Failed to process {file}: {e}")
 
 def clean_raw_data_file(input_csv="relevant.csv", output_csv="raw_data.csv"):
+    """Clean and validate raw data file."""
     if not os.path.exists(input_csv):
         print(f"Input file {input_csv} not found.")
         return None
@@ -241,12 +250,14 @@ def generate_and_process_data(
     intermediate_csv="relevant.csv",
     final_csv="raw_data.csv",
 ):
+    """Main pipeline function to process CSV and PDF data."""
     print("=== Starting Resume Data Pipeline ===")
+    
     process_csv_data(csv_path, intermediate_csv)
     process_pdf_data(pdf_root_dir, intermediate_csv)
+    
     return clean_raw_data_file(intermediate_csv, final_csv)
 
-# Optional: Only run when this script is the entry point
 if __name__ == "__main__":
     final_output = generate_and_process_data()
     print(f"\nFinal processed data file: {final_output if final_output else 'None'}")
