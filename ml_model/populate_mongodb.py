@@ -65,7 +65,8 @@ for _, row in df.iterrows():
         "description": row["description"],
         "required_skills": extracted_skills,
         "location": row["location"] if pd.notna(row["location"]) else "Not specified",
-        "salary": salary_str
+        "salary": salary_str,
+        "url": row["job_posting_url"]
     }
 
     # print(json.dumps(job_doc, indent=2))

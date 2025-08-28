@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, DollarSign, Users } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 interface JobCardProps {
 	job: {
@@ -40,27 +40,20 @@ export function JobCard({ job }: JobCardProps) {
 				{job.description}
 			</p>
 
-			<div className="flex flex-wrap gap-4 mb-4 text-sm text-muted-foreground">
+			<div className="flex flex-wrap gap-12 mb-4 text-sm text-muted-foreground">
 				<div className="flex items-center gap-1">
 					<MapPin className="w-4 h-4" />
 					{job.location}
 				</div>
-				<div className="flex items-center gap-1">
-					<Clock className="w-4 h-4" />
-					{job.type}
-				</div>
-				<div className="flex items-center gap-1">
-					<DollarSign className="w-4 h-4" />
-					{job.salary}
-				</div>
+				<div className="flex items-center gap-1">{job.type}</div>
+				<div className="flex items-center gap-1">{job.salary}</div>
 			</div>
 
 			<div className="flex gap-3">
 				<Button variant="hero" size="sm" className="flex-1">
-					Apply Now
-				</Button>
-				<Button variant="outline" size="sm" className="flex-1">
-					Save Job
+					<a href="#" className="w-full">
+						Apply Now
+					</a>
 				</Button>
 			</div>
 		</Card>
