@@ -32,7 +32,7 @@ db = client["career_link"]
 collection = db["jobs"]
 
 # Load CSV
-df = pd.read_csv("./data/postings.csv",on_bad_lines="skip", engine="python")
+df = pd.read_csv("../data.txt",on_bad_lines="skip", engine="python")
 
 # Optional: Clear collection
 collection.delete_many({})

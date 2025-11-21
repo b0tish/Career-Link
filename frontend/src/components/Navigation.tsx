@@ -1,12 +1,28 @@
 import { Button } from "@/components/ui/button";
+import useAuthStore from "@/store/authStore";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-interface NavigationProps {
-  showAbout: boolean;
-  onHomeClick: () => void;
-  onAboutClick: () => void;
-}
+export function Navigation() {
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-export function Navigation({ showAbout, onHomeClick, onAboutClick }: NavigationProps) {
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const isHomeActive = location.pathname === '/';
+  const isAboutActive = location.pathname === '/about';
+  const isDashboardActive = location.pathname === '/dashboard';
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b">
       <div className="max-w-7xl mx-auto px-6">
@@ -22,19 +38,42 @@ export function Navigation({ showAbout, onHomeClick, onAboutClick }: NavigationP
           
           <div className="flex items-center space-x-4">
             <Button
-              variant={!showAbout ? "hero" : "ghost"}
+              variant={isHomeActive ? "hero" : "ghost"}
               size="sm"
-              onClick={onHomeClick}
+              onClick={() => navigate('/')}
             >
               Home
             </Button>
             <Button
-              variant={showAbout ? "hero" : "ghost"}
+              variant={isAboutActive ? "hero" : "ghost"}
               size="sm"
-              onClick={onAboutClick}
+              onClick={() => navigate('/about')}
             >
               About
             </Button>
+
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 flex items-center justify-center space-x-2 px-4">
+                    <span>Hello, {user?.username}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuItem onClick={() => navigate("/dashboard")} className={isDashboardActive ? "bg-primary text-primary-foreground" : ""}>
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
+                Login
+              </Button>
+            )}
           </div>
         </div>
       </div>
